@@ -14,14 +14,183 @@ let itemDataPromise = null;
 const ratesPageInFlight = new Map();
 const insightsPageInFlight = new Map();
 let currentRoleFilter = "All";
+let showFavoritesOnly = false;
+let keyboardSelectionIndex = -1;
+
+const FAVORITES_STORAGE_KEY = "favoriteChampionIds";
+const COMPARE_STORAGE_KEY = "compareChampionIds";
+const favoriteChampionIds = new Set();
+let compareChampionIds = [];
 
 const prefetchedInsightKeys = new Set();
+
+function loadLocalPreferences(){
+  try {
+    const rawFavorites = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+    if (Array.isArray(rawFavorites)) {
+      rawFavorites.forEach((id) => {
+        if (id) favoriteChampionIds.add(String(id));
+      });
+    }
+  } catch (_err) {}
+
+  try {
+    const rawCompare = JSON.parse(localStorage.getItem(COMPARE_STORAGE_KEY) || "[]");
+    if (Array.isArray(rawCompare)) {
+      compareChampionIds = rawCompare.map((id) => String(id)).slice(0, 3);
+    }
+  } catch (_err) {
+    compareChampionIds = [];
+  }
+
+}
+
+function saveFavorites(){
+  localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(Array.from(favoriteChampionIds)));
+}
+
+function saveCompare(){
+  localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(compareChampionIds));
+}
+
+function setProfileStatus(message){
+  const el = document.getElementById("profileStatus");
+  if (!el) return;
+  el.textContent = message || "";
+}
+
+function exportProfileData(){
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    favorites: Array.from(favoriteChampionIds),
+    compare: compareChampionIds.slice(0, 3)
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  a.href = url;
+  a.download = `league-companion-profile-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setProfileStatus("Profile exported.");
+}
+
+function importProfileData(raw){
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== "object") throw new Error("Invalid profile JSON.");
+
+  const nextFavorites = Array.isArray(parsed.favorites) ? parsed.favorites.map((id) => String(id)) : [];
+  const nextCompare = Array.isArray(parsed.compare) ? parsed.compare.map((id) => String(id)).slice(0, 3) : [];
+  favoriteChampionIds.clear();
+  nextFavorites.forEach((id) => favoriteChampionIds.add(id));
+  compareChampionIds = nextCompare;
+
+  saveFavorites();
+  saveCompare();
+  updateFavoritesOnlyButton();
+  renderChampions();
+  renderComparePanel();
+  updateDetailActionButtons();
+  setProfileStatus("Profile imported.");
+}
+
+function updateFavoritesOnlyButton(){
+  const btn = document.getElementById("favoritesOnlyBtn");
+  if (!btn) return;
+  btn.setAttribute("aria-pressed", String(showFavoritesOnly));
+  btn.textContent = showFavoritesOnly ? "Showing favorites only" : "Show favorites only";
+}
+
+function getRatesForChampion(c){
+  if (!c) return null;
+  return (
+    liveRatesByChampion[normalizeChampionName(c.name)] ||
+    liveRatesByChampion[normalizeChampionName(c.id)] ||
+    liveRatesBySlug[normalizeChampionName(c.id)] ||
+    null
+  );
+}
+
+function renderComparePanel(){
+  const panel = document.getElementById("comparePanel");
+  const grid = document.getElementById("compareGrid");
+  if (!panel || !grid) return;
+
+  if (!compareChampionIds.length) {
+    panel.style.display = "none";
+    grid.innerHTML = "";
+    return;
+  }
+
+  const cards = compareChampionIds
+    .map((id) => champs.find((c) => c.id === id))
+    .filter(Boolean)
+    .map((c) => {
+      const rates = getRatesForChampion(c) || {};
+      return `
+        <article class="compare-card">
+          <div class="name">${escapeHtml(c.name)}</div>
+          <p>Win: ${formatRate(rates.win ?? null)}</p>
+          <p>Pick: ${formatRate(rates.pick ?? null)}</p>
+          <p>Ban: ${formatRate(rates.ban ?? null)}</p>
+        </article>`;
+    })
+    .join("");
+
+  panel.style.display = cards ? "block" : "none";
+  grid.innerHTML = cards;
+}
+
+function isFavoriteChampion(championId){
+  return favoriteChampionIds.has(String(championId));
+}
+
+function toggleFavoriteChampion(championId){
+  const id = String(championId);
+  if (favoriteChampionIds.has(id)) favoriteChampionIds.delete(id);
+  else favoriteChampionIds.add(id);
+  saveFavorites();
+  renderChampions();
+}
+
+function toggleCompareChampion(championId){
+  const id = String(championId);
+  if (compareChampionIds.includes(id)) {
+    compareChampionIds = compareChampionIds.filter((x) => x !== id);
+  } else {
+    if (compareChampionIds.length >= 3) compareChampionIds.shift();
+    compareChampionIds.push(id);
+  }
+  saveCompare();
+  renderComparePanel();
+  updateDetailActionButtons();
+}
+
+function updateDetailActionButtons(){
+  const favBtn = document.getElementById("favoriteChampionBtn");
+  const cmpBtn = document.getElementById("compareChampionBtn");
+  if (favBtn && favBtn.dataset.championId) {
+    const on = isFavoriteChampion(favBtn.dataset.championId);
+    favBtn.setAttribute("aria-pressed", String(on));
+    favBtn.textContent = on ? "★ Favorited" : "☆ Add favorite";
+  }
+  if (cmpBtn && cmpBtn.dataset.championId) {
+    const on = compareChampionIds.includes(cmpBtn.dataset.championId);
+    cmpBtn.setAttribute("aria-pressed", String(on));
+    cmpBtn.textContent = on ? "✓ In compare" : "+ Compare";
+  }
+}
 
 function setRoleFilter(btn, role) {
   currentRoleFilter = role;
   document.querySelectorAll(".role-filter").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   currentPage = 1;
+  keyboardSelectionIndex = -1;
   renderChampions();
 }
 
@@ -464,6 +633,7 @@ async function loadChamps(){
       }))
       .sort((a,b)=>a.name.localeCompare(b.name));
     renderChampions();
+    renderComparePanel();
     loadLiveChampionRates().catch(() => console.warn("Live rates unavailable"));
     loadItemData(latestVersion).catch(() => console.warn("Item data unavailable"));
   }catch(e){
@@ -477,6 +647,7 @@ function renderChampions(){
   filteredChamps = champs.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchText);
     if (!matchesSearch) return false;
+    if (showFavoritesOnly && !isFavoriteChampion(c.id)) return false;
     if (currentRoleFilter === "All") return true;
     // Look up role from CHAMPION_EXTRAS
     const extrasKey = Object.keys(window.CHAMPION_EXTRAS || {}).find(k =>
@@ -496,18 +667,57 @@ function renderChampions(){
   const list = document.getElementById("list");
   list.innerHTML = "";
 
-  filteredChamps.slice(start, end).forEach(c=>{
+  const pageChamps = filteredChamps.slice(start, end);
+
+  if (!pageChamps.length) {
+    list.innerHTML = "<p>No champions match current filters.</p>";
+    keyboardSelectionIndex = -1;
+  }
+
+  pageChamps.forEach((c, idx)=>{
     const div = document.createElement("div");
     div.className = "card";
-    div.innerHTML = `<img src="${c.image}" alt="${c.name}" onerror="this.src='https://via.placeholder.com/36?text=?'">${c.name}`;
+    div.setAttribute("tabindex", "0");
+    div.setAttribute("role", "button");
+    div.dataset.index = String(idx);
+    const star = isFavoriteChampion(c.id) ? "<span class=\"favorite-mark\" aria-hidden=\"true\">★</span>" : "";
+    div.innerHTML = `<img src="${c.image}" alt="${c.name}" onerror="this.src='https://via.placeholder.com/36?text=?'">${c.name}${star}`;
     div.onclick = ()=>showChampion(c);
+    div.onkeydown = (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      showChampion(c);
+    };
     div.addEventListener("mouseenter", () => prefetchChampionBuildData(c), { passive: true });
     list.appendChild(div);
+    requestAnimationFrame(() => {
+      window.setTimeout(() => div.classList.add("card-in"), idx * 24);
+    });
   });
+
+  if (keyboardSelectionIndex >= pageChamps.length) keyboardSelectionIndex = pageChamps.length - 1;
+  updateKeyboardSelectionVisual();
 
   document.getElementById("pageInfo").innerText = `Page ${currentPage} / ${totalPages || 1}`;
   document.getElementById("prevPage").disabled = currentPage === 1;
   document.getElementById("nextPage").disabled = currentPage === totalPages || totalPages === 0;
+}
+
+function updateKeyboardSelectionVisual(){
+  const cards = Array.from(document.querySelectorAll("#list .card"));
+  cards.forEach((card, idx) => {
+    card.classList.toggle("keyboard-selected", idx === keyboardSelectionIndex);
+  });
+}
+
+function moveKeyboardSelection(step){
+  const cards = Array.from(document.querySelectorAll("#list .card"));
+  if (!cards.length) return;
+  if (keyboardSelectionIndex < 0) keyboardSelectionIndex = 0;
+  else keyboardSelectionIndex = Math.max(0, Math.min(cards.length - 1, keyboardSelectionIndex + step));
+  updateKeyboardSelectionVisual();
+  cards[keyboardSelectionIndex].focus();
+  cards[keyboardSelectionIndex].scrollIntoView({ block: "nearest" });
 }
 
 function changePage(dir){
@@ -534,25 +744,25 @@ async function showChampion(c){
   bgEl.style.backgroundImage = `url('${splashUrl}')`;
   
   d.innerHTML=`
-    <div class="skeleton skeleton-title"></div>
+    <div class="skeleton skeleton-title" style="--reveal-delay:0ms"></div>
     <div class="rates-strip">
-      <div><p>Win rate</p><div class="skeleton skeleton-bar"></div><div class="skeleton skeleton-text short"></div></div>
-      <div><p>Pick rate</p><div class="skeleton skeleton-bar"></div><div class="skeleton skeleton-text short"></div></div>
-      <div><p>Ban rate</p><div class="skeleton skeleton-bar"></div><div class="skeleton skeleton-text short"></div></div>
+      <div><p>Win rate</p><div class="skeleton skeleton-bar" style="--reveal-delay:40ms"></div><div class="skeleton skeleton-text short" style="--reveal-delay:80ms"></div></div>
+      <div><p>Pick rate</p><div class="skeleton skeleton-bar" style="--reveal-delay:120ms"></div><div class="skeleton skeleton-text short" style="--reveal-delay:160ms"></div></div>
+      <div><p>Ban rate</p><div class="skeleton skeleton-bar" style="--reveal-delay:200ms"></div><div class="skeleton skeleton-text short" style="--reveal-delay:240ms"></div></div>
     </div>
     <div class="details-top">
       <div class="champ-column">
-        <div class="skeleton skeleton-image"></div>
-        <div class="skeleton skeleton-text"></div>
-        <div class="skeleton skeleton-text"></div>
-        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-image" style="--reveal-delay:280ms"></div>
+        <div class="skeleton skeleton-text" style="--reveal-delay:320ms"></div>
+        <div class="skeleton skeleton-text" style="--reveal-delay:360ms"></div>
+        <div class="skeleton skeleton-text" style="--reveal-delay:400ms"></div>
       </div>
       <div class="side-insights">
-        <div class="skeleton skeleton-title" style="margin-top:0"></div>
-        <div class="skeleton skeleton-text"></div>
-        <div class="skeleton skeleton-text"></div>
-        <div class="skeleton skeleton-title" style="margin-top:20px"></div>
-        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-title" style="margin-top:0;--reveal-delay:440ms"></div>
+        <div class="skeleton skeleton-text" style="--reveal-delay:480ms"></div>
+        <div class="skeleton skeleton-text" style="--reveal-delay:520ms"></div>
+        <div class="skeleton skeleton-title" style="margin-top:20px;--reveal-delay:560ms"></div>
+        <div class="skeleton skeleton-text" style="--reveal-delay:600ms"></div>
       </div>
     </div>`;
 
@@ -598,6 +808,10 @@ async function showChampion(c){
 
     d.innerHTML=`
       <h2>${champion.name} (${tierLabel(tierTarget)})</h2>
+      <div class="detail-actions">
+        <button id="favoriteChampionBtn" class="detail-action-btn" type="button" data-champion-id="${c.id}" aria-pressed="false">☆ Add favorite</button>
+        <button id="compareChampionBtn" class="detail-action-btn" type="button" data-champion-id="${c.id}" aria-pressed="false">+ Compare</button>
+      </div>
       ${extrasHtml}
       <div class="rates-strip">
         <div>
@@ -653,6 +867,7 @@ async function showChampion(c){
         </div>
       </div>`;
 
+    updateDetailActionButtons();
     // Trigger animation frame for bars smoothly
     requestAnimationFrame(() => {
       if (document.getElementById("winRateBar")) document.getElementById("winRateBar").style.width = `${win ?? 0}%`;
@@ -767,6 +982,7 @@ function updateSearchClearVisibility(){
 
 document.getElementById("search").oninput = ()=>{
   currentPage=1;
+  keyboardSelectionIndex = -1;
   updateSearchClearVisibility();
   renderChampions();
 };
@@ -776,12 +992,39 @@ document.getElementById("searchClear").onclick = ()=>{
   if (!search) return;
   search.value = "";
   currentPage = 1;
+  keyboardSelectionIndex = -1;
   updateSearchClearVisibility();
   renderChampions();
   search.focus();
 };
 
+document.getElementById("favoritesOnlyBtn")?.addEventListener("click", () => {
+  showFavoritesOnly = !showFavoritesOnly;
+  currentPage = 1;
+  keyboardSelectionIndex = -1;
+  updateFavoritesOnlyButton();
+  renderChampions();
+});
+
+document.getElementById("clearCompareBtn")?.addEventListener("click", () => {
+  compareChampionIds = [];
+  saveCompare();
+  renderComparePanel();
+  updateDetailActionButtons();
+});
+
 document.getElementById("content").addEventListener("click", (e) => {
+  const favoriteBtn = e.target.closest("#favoriteChampionBtn");
+  if (favoriteBtn && favoriteBtn.dataset.championId) {
+    toggleFavoriteChampion(favoriteBtn.dataset.championId);
+    updateDetailActionButtons();
+    return;
+  }
+  const compareBtn = e.target.closest("#compareChampionBtn");
+  if (compareBtn && compareBtn.dataset.championId) {
+    toggleCompareChampion(compareBtn.dataset.championId);
+    return;
+  }
   const chip = e.target.closest(".matchup-chip-clickable");
   if (!chip || !chip.dataset.championId) return;
   const target = champs.find((c) => c.id === chip.dataset.championId);
@@ -797,5 +1040,52 @@ document.getElementById("content").addEventListener("keydown", (e) => {
   if (target) showChampion(target);
 });
 
+document.addEventListener("keydown", (e) => {
+  const active = document.activeElement;
+  const isTyping = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+  if (isTyping) return;
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    moveKeyboardSelection(1);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    moveKeyboardSelection(-1);
+  } else if (e.key === "Enter") {
+    const cards = Array.from(document.querySelectorAll("#list .card"));
+    if (!cards.length || keyboardSelectionIndex < 0) return;
+    cards[keyboardSelectionIndex].click();
+  }
+});
+
+document.getElementById("exportProfileBtn")?.addEventListener("click", () => {
+  try {
+    exportProfileData();
+  } catch (error) {
+    console.error(error);
+    setProfileStatus("Export failed.");
+  }
+});
+
+document.getElementById("importProfileBtn")?.addEventListener("click", () => {
+  const input = document.getElementById("importProfileInput");
+  if (input) input.click();
+});
+
+document.getElementById("importProfileInput")?.addEventListener("change", async (e) => {
+  const file = e.target && e.target.files ? e.target.files[0] : null;
+  if (!file) return;
+  try {
+    const raw = await file.text();
+    importProfileData(raw);
+  } catch (error) {
+    console.error(error);
+    setProfileStatus("Import failed. Check JSON file.");
+  }
+  e.target.value = "";
+});
+
+loadLocalPreferences();
+updateFavoritesOnlyButton();
+renderComparePanel();
 updateSearchClearVisibility();
 loadChamps();

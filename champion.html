@@ -91,6 +91,10 @@
     border: 1px solid rgba(165, 180, 252, 0.22);
     box-shadow: 0 10px 28px rgba(0,0,0,0.22);
   }
+
+  .extras-row {
+    display: none !important;
+  }
   body.light .card {
     background: rgba(255, 255, 255, 0.82);
     border-color: rgba(90, 90, 175, 0.25);
@@ -155,6 +159,35 @@
   .ability:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   .ability h3 { margin: 0 0 6px; font-size: 1.1rem; }
   .ability .desc { line-height: 1.5; opacity: 0.95; font-size: 15px; }
+
+  /* Wiki-style ability cards */
+  .ability-card {
+    background: #0a2c4e;
+    border: 1px solid rgba(95, 144, 220, 0.35);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ability-top { display: grid; grid-template-columns: auto 1fr auto; gap:12px; align-items: flex-start; }
+  .ability-title-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:4px; }
+  .ability-icon { width: 58px; height: 58px; border:1px solid rgba(255,255,255,0.15); border-radius:8px; background:#081d38; display:flex; align-items:center; justify-content:center; }
+  .ability-icon img { max-width:48px; max-height:48px; }
+  .ability-name { font-size: 1.05rem; font-weight: 700; color: #b8dcff; }
+  .ability-meta { font-size: 0.84rem; color: rgba(216,232,255,0.9); }
+  .ability-body { display: flex; gap: 12px; flex-wrap: wrap; }
+  .ability-desc { flex:1; min-width:200px; color:#dbe8ff; font-size:0.9rem; line-height:1.42; }
+  .ability-scaling { width: 200px; min-width:160px; background: rgba(14, 49, 89, 0.86); border: 1px solid rgba(122, 181, 255, 0.28); border-radius: 8px; padding: 10px; font-size: 0.82rem; }
+  .ability-scaling strong { color:#9fd7ff; }
+  .ability-extra { margin-top:6px; border-top:1px solid rgba(100, 155, 215, 0.2); padding-top:6px; font-size: 0.82rem; color:#c8dbf7; }
+  .ability-extra strong { color:#e7f5ff; }
+  @media (max-width: 768px) {
+    .ability-top { grid-template-columns: 1fr; }
+    .ability-scaling { width: 100%; min-width: auto; }
+    .ability-body { flex-direction: column; }
+  }
 
   ul.tips { margin: 8px 0 0; padding-left: 20px; }
   ul.tips li { margin-bottom: 6px; line-height: 1.45; }
@@ -254,6 +287,7 @@
       <a href="index.html">Champion List & Abilities</a>
       <a href="patch-notes.html">Patch Notes</a>
       <a href="newest-champion.html">Newest Champion</a>
+      <a href="items.html">Items</a>
     </div>
     <div class="toggle-container">
       <div class="toggle-wrapper" onclick="toggleDarkMode()">
@@ -274,7 +308,7 @@
     <div id="main" style="display:none;"></div>
   </div>
 
-<script src="champion-extras.js"></script>
+<!-- Role/Tilt/Combo extras removed -->
 <script>
 const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 const DDRAGON_BASE = "https://ddragon.leagueoflegends.com/cdn";
@@ -308,6 +342,47 @@ function stripTags(html) {
     .trim();
 }
 
+const ABILITY_DETAILS = {
+  // Example override structure:
+  // Draven: { Q: { scalingLabel: 'BONUS PHYSICAL DAMAGE', scalingText: '100%', extra: ['Uses bonus AD'] } }
+};
+
+function formatSpellVars(text) {
+  const clean = stripTags(text || "");
+  return clean.replace(/(\d+\.?\d*%?)/g, "<strong>$1</strong>");
+}
+
+function getScalingText(spell) {
+  if (!spell) return "None";
+
+  const parts = [];
+  if (Array.isArray(spell.vars) && spell.vars.length) {
+    const vars = spell.vars
+      .map((v) => {
+        const coeff = Number(v.coeff || 0);
+        const link = `${v.link || v.key || ""}`.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+        if (!Number.isFinite(coeff) || coeff === 0) return null;
+        return `${coeff.toFixed(2)} × ${link || 'Unknown'}`;
+      })
+      .filter(Boolean);
+    if (vars.length) parts.push(vars.join(', '));
+  }
+
+  if (Array.isArray(spell.effectBurn) && spell.effectBurn.length) {
+    const effects = spell.effectBurn.filter((v) => v && v !== '0');
+    if (effects.length) parts.push(`Effect per rank: ${effects.join(' / ')}`);
+  }
+
+  if (parts.length) return parts.join(' | ');
+  return 'None';
+}
+
+function getSpellImage(version, champId, imageName) {
+  if (!imageName) return '';
+  // Spell and passive icons are in /img/spell/<imageName>
+  return `${DDRAGON_BASE}/${version}/img/spell/${imageName}`;
+}
+
 function barPct(n, max) {
   const v = Math.max(0, Math.min(max, Number(n) || 0));
   return `${(v / max) * 100}%`;
@@ -325,19 +400,8 @@ function renderChampionPage(ch, version, id) {
 
   const tags = (ch.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("");
 
-  const extrasKey = Object.keys(window.CHAMPION_EXTRAS || {}).find(k => k.toLowerCase() === String(ch.name || "").toLowerCase().replace(/[^a-z0-9]/g,"")) || ch.name;
-  const extras = (window.CHAMPION_EXTRAS && window.CHAMPION_EXTRAS[extrasKey]) || { role: "Flex", tiltRisk: "Balanced", combo: "Situational" };
-  let tiltRiskClass = "";
-  if (extras.tiltRisk.includes("Strong Early")) tiltRiskClass = "tilt-risk-strong";
-  else if (extras.tiltRisk.includes("Weak Early")) tiltRiskClass = "tilt-risk-weak";
-
-  const extrasHtml = `
-    <div class="extras-row" style="margin-top: 14px; margin-bottom: 0;">
-      <div class="extras-badge"><span class="extras-label">Role</span><span class="extras-value">${escapeHtml(extras.role)}</span></div>
-      <div class="extras-badge"><span class="extras-label">Tilt Risk</span><span class="extras-value ${tiltRiskClass}">${escapeHtml(extras.tiltRisk)}</span></div>
-      <div class="extras-badge"><span class="extras-label">Most Used Combo</span><span class="extras-value">${escapeHtml(extras.combo)}</span></div>
-    </div>
-  `;
+  // role/tilt/combo extras removed as requested
+  const extrasHtml = "";
 
   const stats = ch.stats || {};
   const statKeys = [
@@ -367,35 +431,76 @@ function renderChampionPage(ch, version, id) {
   }).join("");
 
   const padKey = String(ch.key).padStart(4, '0');
-  let abilitiesHtml = "";
-  if (ch.passive && ch.passive.name) {
-    const vidUrl = `https://d28xe8vt774jo5.cloudfront.net/champion-abilities/${padKey}/ability_${padKey}_P1.mp4`;
-    abilitiesHtml += `
-      <div class="ability">
-        <h3>Passive — ${escapeHtml(ch.passive.name)}</h3>
-        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px;">
-          <div class="desc" style="flex:1; min-width:200px;">${escapeHtml(stripTags(ch.passive.description))}</div>
-          <video src="${vidUrl}" style="width: 100%; max-width: 250px; border-radius: 8px; border: 1px solid rgba(165,180,252,0.3);" autoplay loop muted playsinline onerror="this.style.display='none'"></video>
+  const abilityOverrides = ABILITY_DETAILS[ch.name] || {};
+
+  function renderAbilityCard({ abilityKey, title, iconUrl, cost, cooldown, castTime, description, scalingLabel, scalingText, extraLines }) {
+    const metaParts = [];
+    if (cost && cost !== 'None') metaParts.push(`Cost: ${escapeHtml(cost)}`);
+    if (cooldown && cooldown !== 'None') metaParts.push(`Cooldown: ${escapeHtml(cooldown)}`);
+    metaParts.push(`Cast Time: ${escapeHtml(castTime || 'None')}`);
+
+    const descHtml = escapeHtml(description || 'No ability description available.').replace(/\n/g, '<br>');
+    const extraHtml = Array.isArray(extraLines) && extraLines.length
+      ? extraLines.map((line) => `<div>${escapeHtml(line)}</div>`).join('')
+      : '';
+
+    return `
+      <div class="ability-card">
+        <div class="ability-top">
+          <div class="ability-icon"><img src="${escapeHtml(iconUrl || '')}" alt="${escapeHtml(title)}"></div>
+          <div>
+            <div class="ability-title-row"><span class="ability-name">${escapeHtml(title)}</span></div>
+            <div class="ability-meta">${metaParts.join(' · ')}</div>
+          </div>
+          <div class="ability-scaling"><strong>${escapeHtml(scalingLabel || 'Scaling')}</strong><br>${escapeHtml(scalingText || 'None')}</div>
         </div>
+        <div class="ability-body">
+          <div class="ability-desc">${descHtml}</div>
+        </div>
+        ${extraHtml ? `<div class="ability-extra"><strong>Notes:</strong>${extraHtml}</div>` : ''}
       </div>`;
   }
-  const keys = ["Q", "W", "E", "R"];
+
+  let abilitiesHtml = "";
+
+  if (ch.passive && ch.passive.name) {
+    const passiveKey = 'P';
+    const passiveOverride = abilityOverrides[passiveKey] || {};
+    abilitiesHtml += renderAbilityCard({
+      abilityKey: passiveKey,
+      title: `Passive — ${ch.passive.name}`,
+      iconUrl: getSpellImage(version, id, ch.passive.image?.full),
+      cost: 'None',
+      cooldown: 'None',
+      castTime: 'None',
+      description: stripTags(ch.passive.description || ch.passive.lore || ''),
+      scalingLabel: passiveOverride.scalingLabel || 'Scaling',
+      scalingText: passiveOverride.scalingText || getScalingText(ch.passive),
+      extraLines: passiveOverride.extra || []
+    });
+  }
+
+  const keys = ['Q', 'W', 'E', 'R'];
   (ch.spells || []).forEach((spell, i) => {
     if (!spell || !spell.name) return;
-    const body = stripTags(spell.description || spell.tooltip || "");
-    const meta = [spell.cooldownBurn && `Cooldown: ${spell.cooldownBurn}`, spell.costBurn && `Cost: ${spell.costBurn}`].filter(Boolean).join(" · ");
-    const key = keys[i] || "?";
-    const vidKey = `${key}1`;
-    const vidUrl = `https://d28xe8vt774jo5.cloudfront.net/champion-abilities/${padKey}/ability_${padKey}_${vidKey}.mp4`;
-    abilitiesHtml += `
-      <div class="ability">
-        <h3>${key} — ${escapeHtml(spell.name)}</h3>
-        ${meta ? `<div class="desc" style="opacity:0.88;font-size:14px;margin-bottom:6px;font-weight:600;">${escapeHtml(meta)}</div>` : ""}
-        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px;">
-          <div class="desc" style="flex:1; min-width:200px;">${escapeHtml(body)}</div>
-          <video src="${vidUrl}" style="width: 100%; max-width: 250px; border-radius: 8px; border: 1px solid rgba(165,180,252,0.3);" autoplay loop muted playsinline onerror="this.style.display='none'"></video>
-        </div>
-      </div>`;
+    const spellKey = keys[i] || '?';
+    const spellOverride = abilityOverrides[spellKey] || {};
+    const costValue = spell.costBurn || spell.cost || 'None';
+    const cooldownValue = spell.cooldownBurn || spell.cooldown || 'None';
+    const castTimeValue = spell.castTimeBurn || spell.castTime || 'None';
+
+    abilitiesHtml += renderAbilityCard({
+      abilityKey: spellKey,
+      title: `${spellKey} — ${spell.name}`,
+      iconUrl: getSpellImage(version, id, spell.image?.full),
+      cost: costValue,
+      cooldown: cooldownValue,
+      castTime: castTimeValue,
+      description: stripTags(spell.description || spell.tooltip || ''),
+      scalingLabel: spellOverride.scalingLabel || 'Scaling',
+      scalingText: spellOverride.scalingText || getScalingText(spell),
+      extraLines: spellOverride.extra || []
+    });
   });
 
   const ally = Array.isArray(ch.allytips) && ch.allytips.length

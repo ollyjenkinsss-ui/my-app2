@@ -14,6 +14,7 @@
     <a href="index.html" class="active" aria-current="page">Champion List & Abilities</a>
     <a href="patch-notes.html">Patch Notes</a>
     <a href="newest-champion.html">Newest Champion</a>
+    <a href="items.html">Items</a>
   </div>
   <div class="toggle-container">
     <div class="toggle-wrapper" onclick="toggleDarkMode()">
@@ -38,6 +39,15 @@
       <button class="role-filter" data-role="Bot" onclick="setRoleFilter(this, 'Bot')">Bot</button>
       <button class="role-filter" data-role="Support" onclick="setRoleFilter(this, 'Support')">Support</button>
     </div>
+    <div class="list-tools">
+      <button id="favoritesOnlyBtn" class="list-tool-btn" type="button" aria-pressed="false">Show favorites only</button>
+      <div class="profile-tools">
+        <button id="exportProfileBtn" class="list-tool-btn" type="button">Export profile</button>
+        <button id="importProfileBtn" class="list-tool-btn" type="button">Import profile</button>
+        <input id="importProfileInput" type="file" accept="application/json" hidden>
+        <p id="profileStatus" class="profile-status" aria-live="polite"></p>
+      </div>
+    </div>
     <div id="list">Loading champions…</div>
     <div id="pagination">
       <button id="prevPage" onclick="changePage(-1)">Prev</button>
@@ -47,7 +57,25 @@
   </div>
   <div id="content">
     <h1>Champion Details</h1>
-    <div id="details">Select a champion from the sidebar.</div>
+    <div id="details">
+      <div class="onboarding-panel">
+        <h2>Quick help</h2>
+        <p>Pick a champion to view rates, runes, build paths, and matchup tips.</p>
+        <ul>
+          <li><strong>Win rate</strong>: how often this champion wins.</li>
+          <li><strong>Pick rate</strong>: how common the champion is in games.</li>
+          <li><strong>Ban rate</strong>: how often players ban the champion.</li>
+          <li><strong>Role filters</strong>: Top / Jungle / Mid / Bot / Support.</li>
+        </ul>
+      </div>
+    </div>
+    <section id="comparePanel" class="compare-panel" style="display:none;">
+      <div class="compare-head">
+        <h2>Quick compare</h2>
+        <button id="clearCompareBtn" class="compare-clear-btn" type="button">Clear</button>
+      </div>
+      <div id="compareGrid" class="compare-grid"></div>
+    </section>
   </div>
 </div>
 

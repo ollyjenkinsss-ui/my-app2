@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>League Items</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Barlow Condensed', sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(55, 110, 255, 0.12), transparent 28%),
+      radial-gradient(circle at top right, rgba(167, 91, 255, 0.10), transparent 26%),
+      linear-gradient(135deg, #07111f 0%, #0c1730 48%, #101d3f 100%);
+    color: #eef3ff;
+    min-height: 100vh;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+
+  body.light {
+    background:
+      radial-gradient(circle at top left, rgba(76, 132, 255, 0.10), transparent 28%),
+      radial-gradient(circle at top right, rgba(159, 101, 255, 0.08), transparent 24%),
+      linear-gradient(135deg, #eef3ff 0%, #e4ebff 50%, #dbe4ff 100%);
+    color: #102247;
+  }
+
+  #header {
+    width: 100%;
+    padding: 14px 28px;
+    background: rgba(10, 17, 36, 0.82);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(115, 152, 255, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  body.light #header {
+    background: rgba(240, 244, 255, 0.88);
+    border-bottom-color: rgba(93, 120, 195, 0.18);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: clamp(8px, 1.5vw, 16px);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .nav-links a {
+    color: #cbd7ff;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 12px;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+
+  .nav-links a:hover,
+  .nav-links a.active {
+    background: rgba(99, 140, 255, 0.16);
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
+
+  body.light .nav-links a {
+    color: #27406f;
+  }
+
+  body.light .nav-links a:hover,
+  body.light .nav-links a.active {
+    background: rgba(89, 126, 232, 0.14);
+    color: #102247;
+  }
+
+  .toggle-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .toggle-wrapper {
+    cursor: pointer;
+  }
+
+  .toggle-switch {
+    width: 72px;
+    height: 34px;
+    border-radius: 999px;
+    position: relative;
+    background: linear-gradient(135deg, #1b2d5c, #314da0);
+    border: 1px solid rgba(158, 183, 255, 0.32);
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
+    transition: background 0.25s ease;
+  }
+
+  body.light .toggle-switch {
+    background: linear-gradient(135deg, #dce7ff, #bdd1ff);
+    border-color: rgba(93, 120, 195, 0.25);
+  }
+
+  .toggle-knob {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f4f7ff, #c9d8ff);
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1b2d5c;
+    font-size: 14px;
+    transition: left 0.25s ease, transform 0.25s ease;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  }
+
+  body.light .toggle-knob {
+    left: 41px;
+    background: linear-gradient(135deg, #fff8cf, #ffe28a);
+    color: #805500;
+  }
+
+  .page {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 28px 22px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .hero-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 24px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(18, 29, 63, 0.94), rgba(14, 25, 55, 0.82));
+    border: 1px solid rgba(118, 155, 255, 0.18);
+    box-shadow:
+      0 18px 48px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  body.light .hero-bar {
+    background: linear-gradient(135deg, rgba(246, 249, 255, 0.96), rgba(232, 239, 255, 0.92));
+    border-color: rgba(93, 120, 195, 0.18);
+    box-shadow:
+      0 16px 38px rgba(61, 88, 150, 0.12),
+      inset 0 1px 0 rgba(255,255,255,0.7);
+  }
+
+  .hero-copy h1 {
+    margin: 0;
+    font-size: clamp(2rem, 3vw, 2.8rem);
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .hero-copy p {
+    margin: 10px 0 0;
+    color: #b9c9ff;
+    font-size: 1rem;
+    max-width: 720px;
+  }
+
+  body.light .hero-copy p {
+    color: #4f6797;
+  }
+
+  .search-wrap {
+    width: 100%;
+    max-width: 520px;
+    position: relative;
+  }
+
+  #searchInput {
+    width: 100%;
+    height: 52px;
+    border-radius: 16px;
+    border: 1px solid rgba(122, 162, 255, 0.22);
+    background: rgba(8, 15, 33, 0.78);
+    color: #eef3ff;
+    padding: 0 48px 0 16px;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+  }
+
+  #searchInput:focus {
+    border-color: rgba(124, 167, 255, 0.55);
+    box-shadow: 0 0 0 4px rgba(97, 138, 255, 0.14);
+  }
+
+  body.light #searchInput {
+    background: rgba(255,255,255,0.82);
+    color: #102247;
+    border-color: rgba(110, 139, 214, 0.22);
+  }
+
+  .search-clear {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #9eb7ff;
+    font-size: 1.4rem;
+    cursor: pointer;
+    display: none;
+  }
+
+  body.light .search-clear {
+    color: #5472b1;
+  }
+
+  #status {
+    color: #b9c9ff;
+    font-size: 1rem;
+    padding: 4px 2px;
+  }
+
+  body.light #status {
+    color: #4f6797;
+  }
+
+  .items-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .item-category-panel {
+    background: linear-gradient(180deg, rgba(14, 23, 49, 0.88), rgba(9, 16, 34, 0.92));
+    border: 1px solid rgba(118, 155, 255, 0.16);
+    border-radius: 24px;
+    padding: 20px 20px 22px;
+    box-shadow:
+      0 14px 34px rgba(0,0,0,0.28),
+      inset 0 1px 0 rgba(255,255,255,0.035);
+  }
+
+  body.light .item-category-panel {
+    background: linear-gradient(180deg, rgba(247, 249, 255, 0.98), rgba(237, 242, 255, 0.96));
+    border-color: rgba(93, 120, 195, 0.16);
+    box-shadow:
+      0 12px 30px rgba(61, 88, 150, 0.10),
+      inset 0 1px 0 rgba(255,255,255,0.8);
+  }
+
+  .item-category-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .item-category-accent {
+    width: 6px;
+    height: 28px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #6fa8ff, #9a6dff);
+    box-shadow: 0 0 18px rgba(129, 156, 255, 0.55);
+  }
+
+  .item-category-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #eef3ff;
+    letter-spacing: 0.02em;
+  }
+
+  body.light .item-category-title {
+    color: #112347;
+  }
+
+  .item-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 14px;
+  }
+
+  .item-icon-tile {
+    position: relative;
+    border-radius: 18px;
+    padding: 12px 10px 11px;
+    min-height: 132px;
+    background:
+      linear-gradient(180deg, rgba(18, 27, 56, 0.98), rgba(8, 13, 29, 0.98));
+    border: 1px solid rgba(123, 153, 231, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    cursor: pointer;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      border-color 0.18s ease,
+      background 0.18s ease;
+    overflow: hidden;
+  }
+
+  body.light .item-icon-tile {
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(238, 243, 255, 0.98));
+    border-color: rgba(109, 136, 214, 0.15);
+  }
+
+  .item-icon-tile::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 55%);
+    pointer-events: none;
+    opacity: 0.8;
+  }
+
+  .item-icon-tile:hover {
+    transform: translateY(-5px) scale(1.015);
+  }
+
+  .item-icon-tile img {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: block;
+    object-fit: cover;
+    box-shadow: 0 10px 18px rgba(0,0,0,0.28);
+  }
+
+  .item-name {
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.05;
+    color: #eff4ff;
+    max-width: 100%;
+  }
+
+  .item-cost-badge {
+    font-size: 0.76rem;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    border: 1px solid transparent;
+  }
+
+  body.light .item-name {
+    color: #132650;
+  }
+
+  .rarity-basic {
+    border-color: rgba(150, 168, 208, 0.26);
+    box-shadow: 0 0 0 1px rgba(150, 168, 208, 0.08), 0 10px 26px rgba(0,0,0,0.20);
+  }
+
+  .rarity-basic:hover {
+    border-color: rgba(180, 196, 236, 0.46);
+    box-shadow:
+      0 0 0 1px rgba(180, 196, 236, 0.10),
+      0 0 18px rgba(160, 176, 216, 0.15),
+      0 16px 34px rgba(0,0,0,0.24);
+  }
+
+  .rarity-epic {
+    border-color: rgba(91, 147, 255, 0.35);
+    box-shadow: 0 0 0 1px rgba(91, 147, 255, 0.08), 0 12px 28px rgba(0,0,0,0.22);
+  }
+
+  .rarity-epic:hover {
+    border-color: rgba(108, 174, 255, 0.7);
+    box-shadow:
+      0 0 0 1px rgba(108, 174, 255, 0.12),
+      0 0 22px rgba(108, 174, 255, 0.28),
+      0 16px 34px rgba(0,0,0,0.26);
+  }
+
+  .rarity-legendary {
+    border-color: rgba(183, 109, 255, 0.42);
+    box-shadow: 0 0 0 1px rgba(183, 109, 255, 0.08), 0 12px 28px rgba(0,0,0,0.22);
+  }
+
+  .rarity-legendary:hover {
+    border-color: rgba(202, 135, 255, 0.82);
+    box-shadow:
+      0 0 0 1px rgba(202, 135, 255, 0.14),
+      0 0 24px rgba(183, 109, 255, 0.32),
+      0 16px 34px rgba(0,0,0,0.26);
+  }
+
+  .rarity-mythic {
+    border-color: rgba(255, 184, 61, 0.42);
+    box-shadow: 0 0 0 1px rgba(255, 184, 61, 0.08), 0 12px 28px rgba(0,0,0,0.22);
+  }
+
+  .rarity-mythic:hover {
+    border-color: rgba(255, 205, 102, 0.88);
+    box-shadow:
+      0 0 0 1px rgba(255, 205, 102, 0.15),
+      0 0 24px rgba(255, 194, 79, 0.34),
+      0 16px 34px rgba(0,0,0,0.26);
+  }
+
+  .rarity-basic .item-cost-badge {
+    background: rgba(175, 191, 228, 0.12);
+    border-color: rgba(175, 191, 228, 0.20);
+    color: #d9e4ff;
+  }
+
+  .rarity-epic .item-cost-badge {
+    background: rgba(91, 147, 255, 0.14);
+    border-color: rgba(91, 147, 255, 0.25);
+    color: #bfe1ff;
+  }
+
+  .rarity-legendary .item-cost-badge {
+    background: rgba(183, 109, 255, 0.14);
+    border-color: rgba(183, 109, 255, 0.25);
+    color: #e5c6ff;
+  }
+
+  .rarity-mythic .item-cost-badge {
+    background: rgba(255, 191, 76, 0.14);
+    border-color: rgba(255, 191, 76, 0.25);
+    color: #ffe2a6;
+  }
+
+  body.light .rarity-basic .item-cost-badge {
+    color: #425b90;
+    background: rgba(166, 183, 222, 0.14);
+  }
+
+  body.light .rarity-epic .item-cost-badge {
+    color: #1f5da8;
+    background: rgba(91, 147, 255, 0.12);
+  }
+
+  body.light .rarity-legendary .item-cost-badge {
+    color: #7b42b2;
+    background: rgba(183, 109, 255, 0.11);
+  }
+
+  body.light .rarity-mythic .item-cost-badge {
+    color: #9b6500;
+    background: rgba(255, 191, 76, 0.13);
+  }
+
+  .item-tooltip {
+    position: fixed;
+    z-index: 9999;
+    width: 280px;
+    pointer-events: none;
+    background: rgba(8, 13, 27, 0.97);
+    border: 1px solid rgba(123, 156, 255, 0.24);
+    border-radius: 18px;
+    padding: 14px 15px;
+    box-shadow:
+      0 18px 42px rgba(0,0,0,0.42),
+      0 0 28px rgba(78, 119, 255, 0.14);
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+
+  .item-tooltip.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  body.light .item-tooltip {
+    background: rgba(250, 252, 255, 0.98);
+    border-color: rgba(109, 136, 214, 0.2);
+    box-shadow:
+      0 14px 32px rgba(61, 88, 150, 0.16),
+      0 0 22px rgba(78, 119, 255, 0.08);
+  }
+
+  .item-tooltip-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #eef3ff;
+    margin-bottom: 6px;
+  }
+
+  .item-tooltip-cost {
+    color: #9cd3ff;
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+  }
+
+  .item-tooltip-desc {
+    color: #cad8ff;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+
+  .item-tooltip-stats {
+    color: #c7d4ff;
+    font-size: 0.78rem;
+    border-top: 1px solid rgba(123, 156, 255, 0.16);
+    padding-top: 8px;
+    line-height: 1.4;
+  }
+
+  body.light .item-tooltip-name { color: #112347; }
+  body.light .item-tooltip-cost { color: #1660b1; }
+  body.light .item-tooltip-desc,
+  body.light .item-tooltip-stats { color: #38517f; }
+
+  @media (max-width: 700px) {
+    #header {
+      padding: 12px 14px;
+    }
+
+    .page {
+      padding: 18px 12px 28px;
+    }
+
+    .hero-bar {
+      padding: 18px;
+    }
+
+    .item-icon-grid {
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 12px;
+    }
+
+    .item-icon-tile {
+      min-height: 122px;
+      padding: 10px 8px;
+    }
+
+    .item-icon-tile img {
+      width: 50px;
+      height: 50px;
+    }
+
+    .item-tooltip {
+      width: min(280px, calc(100vw - 18px));
+    }
+  }
+</style>
+</head>
+<body>
+  <div id="header">
+    <div class="nav-links">
+      <a href="index.html">Champion List & Abilities</a>
+      <a href="patch-notes.html">Patch Notes</a>
+      <a href="newest-champion.html">Newest Champion</a>
+      <a href="items.html" class="active">Items</a>
+    </div>
+    <div class="toggle-container">
+      <div class="toggle-wrapper" onclick="toggleDarkMode()">
+        <div class="toggle-switch">
+          <div class="toggle-knob" id="toggleKnob" aria-label="Toggle Dark Mode">
+            <span id="toggleIcon">🌙</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+    <section class="hero-bar">
+      <div class="hero-copy">
+        <h1>League Items</h1>
+        <p>Browse every purchasable item with cleaner cards, glow effects, smoother hover tooltips, and rarity-style borders.</p>
+      </div>
+      <div class="search-wrap">
+        <input id="searchInput" placeholder="Search items by name, tag, or description...">
+        <button id="searchClear" class="search-clear" type="button" aria-label="Clear item search">×</button>
+      </div>
+    </section>
+
+    <div id="status">Loading item catalog...</div>
+    <div id="itemsSections" class="items-sections"></div>
+    <div id="itemTooltip" class="item-tooltip"></div>
+  </div>
+
+<script>
+const DDRAGON_VERSIONS_URL = 'https://ddragon.leagueoflegends.com/api/versions.json';
+const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com/cdn';
+
+let itemIndex = {};
+
+const categoryOrder = [
+  'Starter',
+  'Basic',
+  'Boots',
+  'Attack',
+  'Magic',
+  'Defense',
+  'Support',
+  'Consumables',
+  'Trinkets',
+  'Special'
+];
+
+function applyStoredTheme() {
+  const stored = localStorage.getItem('theme');
+  const isLight = stored === 'light';
+  document.body.classList.toggle('light', isLight);
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = isLight ? '🌞' : '🌙';
+}
+
+function toggleDarkMode() {
+  const nextIsLight = !document.body.classList.contains('light');
+  document.body.classList.toggle('light', nextIsLight);
+  localStorage.setItem('theme', nextIsLight ? 'light' : 'dark');
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = nextIsLight ? '🌞' : '🌙';
+}
+
+function resolveVersion(requested) {
+  if (requested && /^\d+\.\d+\.\d+/.test(requested)) return Promise.resolve(requested);
+  return fetch(DDRAGON_VERSIONS_URL)
+    .then((resp) => resp.json())
+    .then((versions) => (Array.isArray(versions) && versions[0]) || '16.6.1');
+}
+
+function safeText(value) {
+  return String(value || '').trim();
+}
+
+function stripHtml(html) {
+  return safeText(html).replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function toReadableStatKey(key) {
+  const map = {
+    FlatHPPoolMod: 'Health',
+    FlatHPRegenMod: 'HP Regen',
+    FlatMPPoolMod: 'Mana',
+    FlatMPRegenMod: 'Mana Regen',
+    FlatArmorMod: 'Armor',
+    FlatSpellBlockMod: 'Magic Resist',
+    FlatAttackSpeedMod: 'Attack Speed',
+    FlatMovementSpeedMod: 'Move Speed',
+    FlatCritChanceMod: 'Crit Chance',
+    FlatCritDamageMod: 'Crit Damage',
+    FlatMagicDamageMod: 'Bonus AP',
+    FlatPhysicalDamageMod: 'Bonus AD',
+    PercentAttackSpeedMod: 'Attack Speed %',
+    PercentMovementSpeedMod: 'Move Speed %',
+    PercentArmorMod: 'Armor %',
+    PercentSpellBlockMod: 'Magic Resist %',
+    PercentHPPoolMod: 'Health %',
+    PercentMPPoolMod: 'Mana %',
+    PercentSpellVampMod: 'Spell Vamp %',
+    PercentLifeStealMod: 'Lifesteal %'
+  };
+  return map[key] || key.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function getItemCategory(item) {
+  const tags = item.tags || [];
+  const name = (item.name || '').toLowerCase();
+  const maps = item.maps || {};
+  const gold = Number(item.gold?.total || 0);
+
+  if (tags.includes('Consumable')) return 'Consumables';
+  if (tags.includes('Trinket')) return 'Trinkets';
+  if (tags.includes('Boots')) return 'Boots';
+  if (tags.includes('Lane') || tags.includes('Jungle')) return 'Starter';
+  if (tags.includes('CriticalStrike') || tags.includes('AttackSpeed') || tags.includes('Damage') || tags.includes('LifeSteal')) return 'Attack';
+  if (tags.includes('SpellDamage') || tags.includes('Mana') || tags.includes('ManaRegen')) return 'Magic';
+  if (tags.includes('Armor') || tags.includes('SpellBlock') || tags.includes('Health')) return 'Defense';
+  if (tags.includes('GoldPer') || tags.includes('Aura') || tags.includes('Vision')) return 'Support';
+
+  if (gold <= 500) return 'Basic';
+  if (maps['11'] === false || name.includes('ornn') || name.includes('arena')) return 'Special';
+
+  return 'Basic';
+}
+
+function getItemRarityClass(item) {
+  const cost = Number(item.gold?.total || 0);
+  if (cost >= 3200) return 'rarity-mythic';
+  if (cost >= 2600) return 'rarity-legendary';
+  if (cost >= 1400) return 'rarity-epic';
+  return 'rarity-basic';
+}
+
+function getItemStatsText(item) {
+  const stats = Object.entries(item.stats || {})
+    .filter(([, value]) => Number(value) > 0)
+    .map(([key, value]) => `${toReadableStatKey(key)}: +${value}`);
+  return stats.length ? stats.join(' • ') : 'No major raw stats listed';
+}
+
+function buildIconTile(item, version) {
+  const cost = Number(item.gold?.total || 0);
+  const rarityClass = getItemRarityClass(item);
+  const statsText = getItemStatsText(item)
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  return `
+    <div
+      class="item-icon-tile ${rarityClass}"
+      data-item-id="${item.id}"
+      data-item-name="${safeText(item.name).replace(/"/g, '&quot;')}"
+      data-item-cost="${cost}"
+      data-item-stats="${statsText}"
+    >
+      <img
+        src="${DDRAGON_BASE}/${version}/img/item/${item.image.full}"
+        alt="${safeText(item.name)}"
+        loading="lazy"
+        onerror="this.src='https://via.placeholder.com/56?text=?'"
+      >
+      <div class="item-name">${safeText(item.name)}</div>
+      <div class="item-cost-badge">${cost}g</div>
+    </div>
+  `;
+}
+
+function groupItemsByCategory(items) {
+  const grouped = {};
+  categoryOrder.forEach((cat) => grouped[cat] = []);
+  items.forEach((item) => {
+    const cat = getItemCategory(item);
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+  return grouped;
+}
+
+function renderItems(items, version) {
+  const status = document.getElementById('status');
+  const container = document.getElementById('itemsSections');
+
+  if (!items.length) {
+    container.innerHTML = '';
+    status.textContent = 'No items matched your search.';
+    return;
+  }
+
+  const grouped = groupItemsByCategory(items);
+  const categoryHtml = categoryOrder
+    .filter((cat) => Array.isArray(grouped[cat]) && grouped[cat].length)
+    .map((cat) => {
+      const sorted = grouped[cat].slice().sort((a, b) => a.name.localeCompare(b.name));
+      const itemsMarkup = sorted.map((item) => buildIconTile(item, version)).join('');
+      return `
+        <article class="item-category-panel">
+          <header class="item-category-header">
+            <div class="item-category-accent"></div>
+            <div class="item-category-title">${cat} Items</div>
+          </header>
+          <div class="item-icon-grid">${itemsMarkup}</div>
+        </article>
+      `;
+    }).join('');
+
+  container.innerHTML = categoryHtml;
+  status.style.display = 'none';
+
+  document.querySelectorAll('.item-icon-tile').forEach((tile) => {
+    tile.addEventListener('click', () => {
+      const itemId = tile.dataset.itemId;
+      window.location.href = `item-detail.html?id=${itemId}`;
+    });
+
+    tile.addEventListener('mouseenter', (e) => {
+      const itemId = tile.dataset.itemId;
+      const itemName = tile.dataset.itemName;
+      const itemCost = tile.dataset.itemCost;
+      const itemStats = tile.dataset.itemStats;
+      handleTileMouseover(e, itemId, itemName, itemCost, itemStats);
+    });
+
+    tile.addEventListener('mousemove', (e) => {
+      moveTooltip(e);
+    });
+
+    tile.addEventListener('mouseleave', handleTileMouseout);
+  });
+}
+
+function handleTileMouseover(e, id, name, cost, stats) {
+  const tooltip = document.getElementById('itemTooltip');
+  const item = itemIndex[id];
+  const shortDesc = item
+    ? stripHtml(item.plaintext || item.description || '').slice(0, 160)
+    : '';
+
+  tooltip.innerHTML = `
+    <div class="item-tooltip-name">${name}</div>
+    <div class="item-tooltip-cost">Cost: ${cost} gold</div>
+    <div class="item-tooltip-desc">${shortDesc || 'No description available.'}</div>
+    <div class="item-tooltip-stats">${stats}</div>
+  `;
+
+  tooltip.classList.add('show');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const tooltip = document.getElementById('itemTooltip');
+  const pad = 16;
+  const tooltipWidth = tooltip.offsetWidth || 280;
+  const tooltipHeight = tooltip.offsetHeight || 140;
+
+  let left = e.clientX + 18;
+  let top = e.clientY - tooltipHeight - 14;
+
+  if (left + tooltipWidth > window.innerWidth - pad) {
+    left = e.clientX - tooltipWidth - 18;
+  }
+
+  if (top < pad) {
+    top = e.clientY + 18;
+  }
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+}
+
+function handleTileMouseout() {
+  const tooltip = document.getElementById('itemTooltip');
+  tooltip.classList.remove('show');
+}
+
+function itemMatches(item, query) {
+  if (!query) return true;
+  query = query.toLowerCase();
+
+  if ((item.name || '').toLowerCase().includes(query)) return true;
+  if ((item.plaintext || '').toLowerCase().includes(query)) return true;
+  if ((item.description || '').toLowerCase().includes(query)) return true;
+
+  const tags = (item.tags || []).join(' ').toLowerCase();
+  return tags.includes(query);
+}
+
+(async function init() {
+  applyStoredTheme();
+
+  const status = document.getElementById('status');
+  const search = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('searchClear');
+
+  try {
+    status.style.display = 'block';
+    status.textContent = 'Loading items from Data Dragon...';
+
+    const version = await resolveVersion();
+    const url = `${DDRAGON_BASE}/${version}/data/en_US/item.json`;
+    const payload = await (await fetch(url)).json();
+
+    const rawItems = Object.entries(payload.data || {}).map(([id, item]) => ({
+      ...item,
+      id
+    }));
+
+    const itemMapByName = {};
+    rawItems.forEach((item) => {
+      if (!item || !item.name) return;
+
+      const isInStore = item.inStore !== false;
+      const totalCost = Number(item.gold?.total || 0);
+      const canBuy = totalCost > 0 && item.gold?.purchasable !== false;
+
+      if (!isInStore || !canBuy) return;
+
+      const cleanName = item.name.toLowerCase().trim();
+      const existing = itemMapByName[cleanName];
+
+      if (!existing || totalCost > Number(existing.gold?.total || 0)) {
+        itemMapByName[cleanName] = item;
+      }
+    });
+
+    const allItems = Object.values(itemMapByName).sort((a, b) => {
+      const catA = getItemCategory(a);
+      const catB = getItemCategory(b);
+      const idxA = categoryOrder.indexOf(catA);
+      const idxB = categoryOrder.indexOf(catB);
+      if (idxA !== idxB) return idxA - idxB;
+      return a.name.localeCompare(b.name);
+    });
+
+    itemIndex = {};
+    allItems.forEach((item) => {
+      itemIndex[item.id] = item;
+    });
+
+    renderItems(allItems, version);
+
+    search.addEventListener('input', () => {
+      const query = search.value.trim();
+      clearBtn.style.display = query ? 'block' : 'none';
+
+      const filtered = allItems.filter((item) => itemMatches(item, query));
+      status.style.display = filtered.length ? 'none' : 'block';
+      renderItems(filtered, version);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      search.value = '';
+      clearBtn.style.display = 'none';
+      renderItems(allItems, version);
+    });
+  } catch (err) {
+    console.error('Failed to load items:', err);
+    status.style.display = 'block';
+    status.textContent = 'Failed to load item catalog. Check your internet connection and try again.';
+  }
+})();
+</script>
+<script src="page-transitions.js"></script>
+</body>
+</html>

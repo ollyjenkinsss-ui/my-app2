@@ -2,11 +2,16 @@
  * Same-tab page transitions: fade out before navigate, fade in after (via sessionStorage flag).
  */
 (function () {
+  var prefersReducedMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   var STYLE =
     "html.pt-root{min-height:100%;}" +
-    "body.pt-from-nav{opacity:0;transition:none;}" +
-    "body.pt-from-nav.pt-in{opacity:1;transition:opacity 0.45s ease;}" +
-    "body.pt-out{opacity:0!important;transition:opacity 0.32s ease!important;pointer-events:none;}";
+    "body.pt-from-nav{opacity:0;transform:translateY(8px) scale(0.995);filter:blur(2px);transition:none;}" +
+    "body.pt-from-nav.pt-in{opacity:1;transform:none;filter:none;transition:opacity 0.42s cubic-bezier(0.22,1,0.36,1),transform 0.42s cubic-bezier(0.22,1,0.36,1),filter 0.42s ease;}" +
+    "body.pt-out{opacity:0!important;transform:translateY(10px) scale(0.992)!important;filter:blur(2px)!important;transition:opacity 0.3s cubic-bezier(0.4,0,1,1)!important,transform 0.3s cubic-bezier(0.4,0,1,1)!important,filter 0.3s ease!important;pointer-events:none;}" +
+    "@media (prefers-reduced-motion: reduce){body.pt-from-nav,body.pt-from-nav.pt-in,body.pt-out{opacity:1!important;transform:none!important;filter:none!important;transition:none!important;}}";
 
   var styleEl = document.createElement("style");
   styleEl.textContent = STYLE;
@@ -36,6 +41,11 @@
   document.addEventListener(
     "click",
     function (e) {
+      if (prefersReducedMotion) return;
+      if (e.defaultPrevented) return;
+      if (e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
       var a = e.target.closest("a[href]");
       if (!a) return;
       if (a.target === "_blank" || a.hasAttribute("download")) return;
@@ -63,7 +73,7 @@
       var dest = a.href;
       window.setTimeout(function () {
         window.location.href = dest;
-      }, 300);
+      }, 320);
     },
     true
   );
