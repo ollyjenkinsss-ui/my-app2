@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Olly's League Companion ;)</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body {
+  margin:0;
+  font-family:'Barlow Condensed', sans-serif;
+  display:flex;
+  height:100vh;
+  background: linear-gradient(120deg,#0b0f25,#151b40);
+  color:#fff;
+  overflow:hidden;
+  transition: background 0.3s, color 0.3s;
+}
+body.light {
+  background: linear-gradient(120deg,#f5f5f5,#dcdcdc);
+  color:#111;
+}
+
+#header {
+  width:100%;
+  padding:10px 30px;
+  background: rgba(20,30,60,0.85);
+  backdrop-filter: blur(10px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:10;
+}
+body.light #header { background: rgba(255,255,255,0.85); }
+
+#header a {
+  color:#a5b4fc;
+  text-decoration:none;
+  font-weight:600;
+  cursor:pointer;
+}
+body.light #header a { color:#3b3b3b; }
+#header a:hover { color:#fff; }
+body.light #header a:hover { color:#111; }
+
+/* Toggle Switch */
+.toggle-container { display:flex; align-items:center; margin-right:30px; }
+.toggle-wrapper { display:flex; align-items:center; cursor:pointer; }
+.toggle-switch {
+  width:50px;
+  height:26px;
+  background:#1f273d;
+  border-radius:13px;
+  position:relative;
+  transition: background 0.3s;
+}
+body.light .toggle-switch { background:#d1d1d1; }
+.toggle-knob {
+  width:24px;
+  height:24px;
+  background:#fff;
+  border-radius:50%;
+  position:absolute;
+  top:1px;
+  left:1px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  transition: transform 0.3s, background 0.3s;
+}
+body.light .toggle-knob { transform: translateX(24px); }
+.icon { pointer-events:none; }
+
+.page { flex:1; padding:80px 30px 30px 30px; overflow-y:auto; display:flex; }
+
+#sidebar {
+  width:360px;
+  padding:20px;
+  background: rgba(20,30,60,0.8);
+  backdrop-filter: blur(10px);
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+  border-radius:0 16px 16px 0;
+}
+body.light #sidebar { background: rgba(240,240,240,0.8); }
+
+#search {
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  margin-bottom:15px;
+  background: rgba(30,40,70,0.6);
+  color:#fff;
+  font-family:'Barlow Condensed', sans-serif;
+}
+body.light #search { background: rgba(200,200,200,0.6); color:#111; }
+#search::placeholder { color: rgba(255,255,255,0.7); }
+body.light #search::placeholder { color: rgba(0,0,0,0.5); }
+
+.card {
+  display:flex;
+  align-items:center;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:12px;
+  background: linear-gradient(145deg,#1c2238,#10172a);
+  cursor:pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+body.light .card { background: linear-gradient(145deg,#e5e5e5,#d1d1d1); color:#111; }
+
+.card:hover { transform: scale(1.03); box-shadow:0 8px 20px rgba(0,0,0,0.5); }
+.card img { width:36px; height:36px; margin-right:12px; border-radius:6px; }
+
+#content {
+  flex:1;
+  padding-left:20px;
+  opacity:0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  font-family:'Barlow Condensed', sans-serif;
+}
+#content.show { opacity:1; transform: translateY(0); }
+
+#content h2 { margin-bottom:10px; }
+#content h3 { margin-top:20px; margin-bottom:10px; letter-spacing:0.5px; color:#a5b4fc; }
+body.light #content h3 { color:#5a5aaf; }
+#content ul { padding-left:20px; margin-top:10px; } 
+#content li { margin-bottom:6px; font-weight:500; }
+
+.bar {
+  height:16px;
+  background: rgba(30,40,70,0.6);
+  border-radius:10px;
+  margin-bottom:10px;
+  overflow:hidden;
+}
+body.light .bar { background: rgba(200,200,200,0.6); }
+.fill { height:100%; text-align:right; padding-right:6px; color:#fff; font-size:12px; border-radius:10px; transition: width 0.7s ease; }
+.fill.win { background: linear-gradient(to right,#3b82f6,#22c55e);}
+.fill.pick { background: linear-gradient(to right,#22c55e,#10b981); }
+.fill.ban { background: linear-gradient(to right,#ef4444,#f87171); }
+.ability-name {
+  border-bottom: 1px dashed rgba(165,180,252,0.8);
+  cursor: help;
+}
+
+#pagination button {
+  padding:6px 12px;
+  border:none;
+  border-radius:8px;
+  background: #3b3b3b;
+  color:#fff;
+  cursor:pointer;
+  transition: background 0.3s;
+  font-family:'Barlow Condensed', sans-serif;
+}
+body.light #pagination button { background:#a5a5a5; color:#111; }
+#pagination button:disabled { opacity:0.5; cursor:default; }
+#pagination span { font-weight:600; align-self:center; font-family:'Barlow Condensed', sans-serif; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div style="display:flex; gap:18px; align-items:center;">
+    <a>Champion List & Abilities</a>
+    <a href="patch-notes.html">Patch Notes</a>
+    <a href="newest-champion.html">Newest Champion</a>
+  </div>
+  <div class="toggle-container">
+    <div class="toggle-wrapper" onclick="toggleDarkMode()">
+      <div class="toggle-switch">
+        <div class="toggle-knob" id="toggleKnob" aria-label="Toggle Dark Mode"><span class="icon">🌙</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="championsPage" class="page">
+  <div id="sidebar">
+    <input id="search" placeholder="Search champion...">
+    <div id="list">Loading champions…</div>
+    <div id="pagination">
+      <button id="prevPage" onclick="changePage(-1)">Prev</button>
+      <span id="pageInfo">Page 1</span>
+      <button id="nextPage" onclick="changePage(1)">Next</button>
+    </div>
+  </div>
+  <div id="content">
+    <h1>Champion Details</h1>
+    <div id="details">Select a champion from the sidebar.</div>
+  </div>
+</div>
+
+<script>
+const tierLabel = w => w>=52?"S":w>=50?"A":w>=48?"B":"C";
+const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
+const DDRAGON_BASE_URL = "https://ddragon.leagueoflegends.com/cdn";
+const OPGG_STATS_URL = "https://r.jina.ai/http://www.op.gg/champions";
+
+let champs=[], currentPage=1, filteredChamps=[];
+const champsPerPage=20;
+let liveRatesByChampion = {};
+
+// Dark mode toggle
+function toggleDarkMode(){
+  const knob = document.getElementById('toggleKnob').querySelector('.icon');
+  document.body.classList.toggle('light');
+  knob.textContent = document.body.classList.contains('light') ? '🌞' : '🌙';
+}
+
+function normalizeChampionName(name){
+  return `${name || ""}`.toLowerCase().replace(/[^a-z0-9]/g,"");
+}
+
+function stripHtml(html){
+  return `${html || ""}`.replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
+}
+
+function clampRate(value){
+  const num = Number(value);
+  if (Number.isNaN(num) || !Number.isFinite(num)) return null;
+  return Math.max(0, Math.min(100, num));
+}
+
+function formatRate(value){
+  return value === null ? "N/A" : `${value.toFixed(2)}%`;
+}
+
+async function loadLiveChampionRates(){
+  if (Object.keys(liveRatesByChampion).length) return liveRatesByChampion;
+  try{
+    const text = await (await fetch(OPGG_STATS_URL, { cache: "no-store" })).text();
+    const pattern = /\|\s*\d+\s*\|\s*\[!\[Image[^\]]*\]\([^)]+\)\*\*([^*]+)\*\*\]\([^)]+\)\s*\|[^|]*\|[^|]*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|/g;
+    const rates = {};
+    let match;
+    while ((match = pattern.exec(text)) !== null){
+      const name = (match[1] || "").trim();
+      const key = normalizeChampionName(name);
+      if (!key) continue;
+      rates[key] = {
+        win: clampRate(match[2]),
+        pick: clampRate(match[3]),
+        ban: clampRate(match[4])
+      };
+    }
+    liveRatesByChampion = rates;
+    return liveRatesByChampion;
+  }catch(error){
+    console.error("Live rate fetch failed:", error);
+    liveRatesByChampion = {};
+    return liveRatesByChampion;
+  }
+}
+
+// Load champions, remove Doom Bots and "None", sort alphabetically
+async function loadChamps(){
+  try{
+    const versions = await (await fetch(DDRAGON_VERSIONS_URL)).json();
+    const latestVersion = Array.isArray(versions) && versions[0] ? versions[0] : null;
+    if (!latestVersion) throw new Error("Could not resolve latest Data Dragon version.");
+
+    const championListUrl = `${DDRAGON_BASE_URL}/${latestVersion}/data/en_US/champion.json`;
+    const payload = await (await fetch(championListUrl)).json();
+    const data = payload && payload.data ? Object.values(payload.data) : [];
+
+    champs = data
+      .map(ch=>({
+        id: ch.id,
+        name: ch.name,
+        key: Number(ch.key),
+        version: latestVersion,
+        image: `${DDRAGON_BASE_URL}/${latestVersion}/img/champion/${ch.id}.png`
+      }))
+      .sort((a,b)=>a.name.localeCompare(b.name));
+    loadLiveChampionRates();
+    renderChampions();
+  }catch(e){
+    document.getElementById("list").innerText="Failed to load champions.";
+    console.error(e);
+  }
+}
+
+// Render champion list with pagination
+function renderChampions(){
+  const searchText = document.getElementById("search").value.toLowerCase();
+  filteredChamps = champs.filter(c => c.name.toLowerCase().includes(searchText));
+
+  const totalPages = Math.ceil(filteredChamps.length / champsPerPage);
+  if(currentPage > totalPages) currentPage = totalPages || 1;
+
+  const start = (currentPage-1)*champsPerPage;
+  const end = start + champsPerPage;
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  filteredChamps.slice(start, end).forEach(c=>{
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<img src="${c.image}" alt="${c.name}" onerror="this.src='https://via.placeholder.com/36?text=?'">${c.name}`;
+    div.onclick = ()=>showChampion(c);
+    list.appendChild(div);
+  });
+
+  document.getElementById("pageInfo").innerText = `Page ${currentPage} / ${totalPages || 1}`;
+  document.getElementById("prevPage").disabled = currentPage === 1;
+  document.getElementById("nextPage").disabled = currentPage === totalPages || totalPages === 0;
+}
+
+function changePage(dir){
+  currentPage += dir;
+  renderChampions();
+  document.getElementById("list").scrollTop = 0;
+}
+
+// Show champion details
+async function showChampion(c){ 
+  const d=document.getElementById("details"); 
+  const contentDiv=document.getElementById("content");
+  contentDiv.classList.remove('show');
+  d.innerText="Loading…";
+  try{
+    const rates = await loadLiveChampionRates();
+    const champData = await (await fetch(`${DDRAGON_BASE_URL}/${c.version}/data/en_US/champion/${c.id}.json`)).json();
+    const champion = champData?.data?.[c.id];
+    if (!champion) throw new Error("Champion detail data missing.");
+    const live = rates[normalizeChampionName(champion.name)] || rates[normalizeChampionName(c.id)] || null;
+    const win = live && live.win !== null ? live.win : null;
+    const pick = live && live.pick !== null ? live.pick : null;
+    const ban = live && live.ban !== null ? live.ban : null;
+    const tierTarget = win === null ? 50 : win;
+    const abilities=[...(champion.passive?[{
+      key:"Passive",
+      name:champion.passive.name,
+      tooltip: stripHtml(champion.passive.description || "No description available.")
+    }]:[])];
+    champion.spells.forEach((s,i)=>abilities.push({
+      key:["Q","W","E","R"][i],
+      name:s.name,
+      tooltip: stripHtml(s.description || "No description available.")
+    }));
+
+    d.innerHTML=`
+      <h2>${champion.name} (${tierLabel(tierTarget)})</h2>
+      <img src="${c.image}" class="champ" width="140" alt="${champion.name}"><br>
+      <p>Win: ${formatRate(win)}</p><div class="bar"><div class="fill win" style="width:${win ?? 0}%">${formatRate(win)}</div></div>
+      <p>Pick: ${formatRate(pick)}</p><div class="bar"><div class="fill pick" style="width:${pick ?? 0}%">${formatRate(pick)}</div></div>
+      <p>Ban: ${formatRate(ban)}</p><div class="bar"><div class="fill ban" style="width:${ban ?? 0}%">${formatRate(ban)}</div></div>
+      <h3>Abilities</h3><ul>${abilities.map(a=>`<li><span class="ability-name" title="${a.tooltip.replace(/"/g,"&quot;")}">${a.key} - ${a.name}</span></li>`).join("")}</ul>`;
+
+    setTimeout(()=>contentDiv.classList.add('show'),100);
+  }catch(e){d.innerText="Failed to load details."; console.error(e);}
+}
+
+document.getElementById("search").oninput = ()=>{
+  currentPage=1;
+  renderChampions();
+};
+
+loadChamps();
+</script>
+</body>
+</html>
