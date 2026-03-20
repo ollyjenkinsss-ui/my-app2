@@ -17,14 +17,20 @@ const PLATFORM_REGION = process.env.PLATFORM_REGION || 'euw1';
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'pages')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use(express.static('.'));
 
-const LP_CACHE_FILE = path.join(__dirname, 'lp-cache.json');
+const LP_CACHE_FILE = path.join(__dirname, 'data', 'lp-cache.json');
 const LP_HISTORY_CAP = 50;
 const RANKED_QUEUE_TO_TYPE = {
   420: 'RANKED_SOLO_5x5',
   440: 'RANKED_FLEX_SR'
 };
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'pages', 'index.html'));
+});
 
 function loadLpCache() {
   try {

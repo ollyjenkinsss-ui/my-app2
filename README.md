@@ -35,10 +35,10 @@ A web application that displays League of Legends champion information including
 
 2. Open your browser and navigate to:
    ```
-   http://localhost:3000/index.html
+   http://localhost:3001/
    ```
 
-The backend proxy server runs on port 3000 and bypasses CORS restrictions to fetch data from external APIs.
+The backend proxy server runs on port 3001 and bypasses CORS restrictions to fetch data from external APIs.
 
 ## How It Works
 
@@ -50,16 +50,17 @@ The backend proxy server runs on port 3000 and bypasses CORS restrictions to fet
 
 ## Files
 
-- `index.html` - Main champion list and details page
-- `patch-notes.html` - Patch notes page
-- `newest-champion.html` - Newest champion showcase
+- `pages/` - All HTML pages (`index.html`, `items.html`, `match-history.html`, etc.)
+- `assets/js/` - Frontend scripts (`app.js`, `page-transitions.js`, etc.)
+- `assets/css/style.css` - Main stylesheet
+- `data/lp-cache.json` - LP cache storage
+- `scripts/generate-static-snapshot.js` - Static snapshot generator
 - `server.js` - Backend proxy server
 - `package.json` - Node.js dependencies
-- `page-transitions.js` - Page transition animations
 
 ## Troubleshooting
 
 If you see "No data available":
 1. Make sure the backend server is running (`npm start`)
 2. Check the browser console (F12) for errors
-3. Verify you're accessing via `http://localhost:3000` not `file://`
+3. Verify you're accessing via `http://localhost:3001` not `file://`
