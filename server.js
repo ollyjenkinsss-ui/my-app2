@@ -1,12 +1,239 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
+
+dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3001;
+const RIOT_API_KEY = process.env.RIOT_API_KEY;
+
+// Riot routing for EUW
+const ACCOUNT_REGION = process.env.ACCOUNT_REGION || 'europe';
+const PLATFORM_REGION = process.env.PLATFORM_REGION || 'euw1';
 
 app.use(cors());
+app.use(express.json());
 app.use(express.static('.'));
+
+const LP_CACHE_FILE = path.join(__dirname, 'lp-cache.json');
+const LP_HISTORY_CAP = 50;
+const RANKED_QUEUE_TO_TYPE = {
+  420: 'RANKED_SOLO_5x5',
+  440: 'RANKED_FLEX_SR'
+};
+
+function loadLpCache() {
+  try {
+    return JSON.parse(fs.readFileSync(LP_CACHE_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveLpCache(cache) {
+  fs.writeFileSync(LP_CACHE_FILE, JSON.stringify(cache, null, 2));
+}
+
+const lpCache = loadLpCache();
+
+function normalizeHistoryEntry(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+
+  const matchId = entry.matchId ? String(entry.matchId) : null;
+  if (!matchId) return null;
+
+  const timestamp = Number(entry.timestamp || entry.updatedAt || Date.now());
+  return {
+    matchId,
+    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+    lp: Number(entry.lp ?? entry.leaguePoints ?? 0),
+    wins: Number(entry.wins ?? 0),
+    losses: Number(entry.losses ?? 0),
+    tier: entry.tier || null,
+    rank: entry.rank || null
+  };
+}
+
+function createEmptyQueueHistory(lastUpdated = null) {
+  return {
+    history: [],
+    lastUpdated: lastUpdated || null
+  };
+}
+
+function normalizeQueueHistory(rawQueue, fallbackUpdatedAt = null) {
+  if (rawQueue && Array.isArray(rawQueue.history)) {
+    const deduped = [];
+    const seen = new Set();
+
+    rawQueue.history
+      .map(normalizeHistoryEntry)
+      .filter(Boolean)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .forEach((entry) => {
+        if (seen.has(entry.matchId)) return;
+        seen.add(entry.matchId);
+        deduped.push(entry);
+      });
+
+    return {
+      history: deduped.slice(0, LP_HISTORY_CAP),
+      lastUpdated: Number(rawQueue.lastUpdated || fallbackUpdatedAt || null) || null
+    };
+  }
+
+  return createEmptyQueueHistory(fallbackUpdatedAt);
+}
+
+function getPlayerLpHistory(puuid) {
+  const key = String(puuid || '');
+  if (!key) {
+    return {
+      solo: createEmptyQueueHistory(),
+      flex: createEmptyQueueHistory(),
+      lastUpdated: null
+    };
+  }
+
+  const raw = lpCache[key] || {};
+  const legacyUpdatedAt = Number(raw.updatedAt || raw.lastUpdated || null) || null;
+
+  const normalized = {
+    solo: normalizeQueueHistory(raw.solo, legacyUpdatedAt),
+    flex: normalizeQueueHistory(raw.flex, legacyUpdatedAt),
+    lastUpdated: Number(raw.lastUpdated || raw.updatedAt || null) || null
+  };
+
+  lpCache[key] = normalized;
+  return normalized;
+}
+
+function queueTypeToKey(queueType) {
+  if (queueType === 'RANKED_SOLO_5x5') return 'solo';
+  if (queueType === 'RANKED_FLEX_SR') return 'flex';
+  return null;
+}
+
+function upsertHistoryEntry(history, nextEntry) {
+  const entry = normalizeHistoryEntry(nextEntry);
+  if (!entry) return history;
+
+  const withoutDuplicate = (history || []).filter((item) => item.matchId !== entry.matchId);
+  const merged = [entry, ...withoutDuplicate].sort((a, b) => b.timestamp - a.timestamp);
+
+  return merged.slice(0, LP_HISTORY_CAP);
+}
+
+function updateLpHistory(puuid, queueType, rankedEntry, matches) {
+  const player = getPlayerLpHistory(puuid);
+  const queueKey = queueTypeToKey(queueType);
+  if (!queueKey || !rankedEntry || !Array.isArray(matches) || !matches.length) {
+    return player;
+  }
+
+  const queueId = queueType === 'RANKED_SOLO_5x5' ? 420 : 440;
+  const newestRankedMatch = matches.find((match) => Number(match.queueId) === queueId);
+  if (!newestRankedMatch?.matchId) {
+    return player;
+  }
+
+  const historyObj = player[queueKey] || createEmptyQueueHistory();
+  const currentSnapshot = buildRankSnapshot(rankedEntry);
+  if (!currentSnapshot) {
+    return player;
+  }
+
+  const latestEntry = Array.isArray(historyObj.history) && historyObj.history.length
+    ? historyObj.history[0]
+    : null;
+
+  if (
+    latestEntry &&
+    latestEntry.lp === currentSnapshot.lp &&
+    latestEntry.wins === currentSnapshot.wins &&
+    latestEntry.losses === currentSnapshot.losses &&
+    latestEntry.tier === currentSnapshot.tier &&
+    latestEntry.rank === currentSnapshot.rank
+  ) {
+    return player;
+  }
+
+  const timestamp = Number(newestRankedMatch.timestamp || Date.now());
+  const nextEntry = {
+    matchId: newestRankedMatch.matchId,
+    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+    lp: currentSnapshot.lp,
+    wins: currentSnapshot.wins,
+    losses: currentSnapshot.losses,
+    tier: currentSnapshot.tier,
+    rank: currentSnapshot.rank
+  };
+
+  historyObj.history = upsertHistoryEntry(historyObj.history, nextEntry);
+  historyObj.lastUpdated = Date.now();
+  player[queueKey] = historyObj;
+  player.lastUpdated = Date.now();
+  lpCache[String(puuid)] = player;
+
+  return player;
+}
+
+function buildLpDeltaByMatchId(historyEntries) {
+  const result = new Map();
+  if (!Array.isArray(historyEntries) || historyEntries.length < 2) {
+    return result;
+  }
+
+  for (let i = 0; i < historyEntries.length - 1; i += 1) {
+    const current = historyEntries[i];
+    const previous = historyEntries[i + 1];
+
+    if (!current?.matchId) continue;
+    if (!previous) {
+      result.set(current.matchId, null);
+      continue;
+    }
+
+    // Keep conservative behavior around promotions/demotions where LP alone is ambiguous.
+    if (current.tier !== previous.tier || current.rank !== previous.rank) {
+      result.set(current.matchId, null);
+      continue;
+    }
+
+    result.set(current.matchId, Number(current.lp || 0) - Number(previous.lp || 0));
+  }
+
+  const oldest = historyEntries[historyEntries.length - 1];
+  if (oldest?.matchId && !result.has(oldest.matchId)) {
+    result.set(oldest.matchId, null);
+  }
+
+  return result;
+}
+
+function calculateLpChanges(recentMatches, playerHistory) {
+  const matches = Array.isArray(recentMatches) ? recentMatches : [];
+  const soloMap = buildLpDeltaByMatchId(playerHistory?.solo?.history || []);
+  const flexMap = buildLpDeltaByMatchId(playerHistory?.flex?.history || []);
+
+  return matches.map((match) => {
+    const queueType = RANKED_QUEUE_TO_TYPE[Number(match.queueId)];
+    if (!queueType) {
+      return { ...match, lpChange: null };
+    }
+
+    const sourceMap = queueType === 'RANKED_SOLO_5x5' ? soloMap : flexMap;
+    const lpChange = sourceMap.has(match.matchId) ? sourceMap.get(match.matchId) : null;
+    return {
+      ...match,
+      lpChange: Number.isFinite(lpChange) ? lpChange : null
+    };
+  });
+}
 
 function championGgSlug(name) {
   return `${name || ''}`.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -161,12 +388,14 @@ function buildMatchups(archetype, champion) {
       champion_name: name,
       win_rate: Number((46.1 + index + seededNumber(`${champion}:${name}:weak`, 0, 2.2)).toFixed(2))
     }));
+
   const strong = rotateList(archetype.matchups.strong, hashString(`${champion}:strong`) % archetype.matchups.strong.length)
     .slice(0, 3)
     .map((name, index) => ({
       champion_name: name,
       win_rate: Number((52.4 + index + seededNumber(`${champion}:${name}:strong`, 0, 2.6)).toFixed(2))
     }));
+
   return dedupe([...weak, ...strong].map((entry) => entry.champion_name)).map((name) => {
     const found = weak.find((entry) => entry.champion_name === name) || strong.find((entry) => entry.champion_name === name);
     return found;
@@ -190,7 +419,7 @@ function cleanNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
-function scrapeOpggSnapshot(html, champion) {
+function scrapeOpggSnapshot(html) {
   const snapshot = {
     stats: { win_rate: null, pick_rate: null, ban_rate: null },
     builds: [],
@@ -219,10 +448,14 @@ function scrapeOpggSnapshot(html, champion) {
   const parsedBuilds = [];
   const parsedBoots = [];
   const bootIds = new Set([3006, 3009, 3020, 3047, 3111, 3117, 3158, 2422]);
+
   for (const row of buildRows) {
     const rowHtml = row[1];
     const itemIds = [...rowHtml.matchAll(/item\/(\d+)\.png/gi)].map((match) => Number(match[1]));
-    const numbers = [...rowHtml.matchAll(/<strong[^>]*>(\d+(?:\.\d+)?)<!-- -->%<\/strong>/gi)].map((match) => cleanNumber(match[1])).filter((value) => value !== null);
+    const numbers = [...rowHtml.matchAll(/<strong[^>]*>(\d+(?:\.\d+)?)<!-- -->%<\/strong>/gi)]
+      .map((match) => cleanNumber(match[1]))
+      .filter((value) => value !== null);
+
     if (itemIds.length === 1 && bootIds.has(itemIds[0])) {
       parsedBoots.push({
         id: itemIds[0],
@@ -231,7 +464,9 @@ function scrapeOpggSnapshot(html, champion) {
       });
       continue;
     }
+
     if (itemIds.length < 3) continue;
+
     parsedBuilds.push({
       items: dedupe(itemIds).slice(0, 6),
       pick_rate: numbers[0] ?? 0,
@@ -239,15 +474,19 @@ function scrapeOpggSnapshot(html, champion) {
       item_count: dedupe(itemIds).length
     });
   }
+
   parsedBuilds.sort((a, b) => {
     const scoreA = a.item_count * 1000 + a.pick_rate + a.win_rate;
     const scoreB = b.item_count * 1000 + b.pick_rate + b.win_rate;
     return scoreB - scoreA;
   });
+
   parsedBoots.sort((a, b) => (b.pick_rate + b.win_rate) - (a.pick_rate + a.win_rate));
+
   if (parsedBuilds.length) {
     const mergedItems = [];
     const seenItems = new Set();
+
     const pushItem = (id) => {
       if (!id || seenItems.has(id)) return;
       seenItems.add(id);
@@ -268,6 +507,7 @@ function scrapeOpggSnapshot(html, champion) {
   const bestRuneClasses = /(bg-black opacity-100|text-main-600|text-gray-900)/i;
   const perkMatches = [...html.matchAll(/<img alt="([^"]+)"[^>]+src="https:\/\/opgg-static\.akamaized\.net\/meta\/images\/lol\/[^"]+\/(perkStyle|perk)\/(\d+)\.png[^"]*"[\s\S]{0,260}?<strong class="text-xs [^"]*">(\d+(?:\.\d+)?)<!-- -->%<\/strong>/gi)];
   const selectedPerks = [];
+
   for (const match of perkMatches) {
     const full = match[0];
     const type = match[2];
@@ -275,14 +515,17 @@ function scrapeOpggSnapshot(html, champion) {
     if (type !== 'perk') continue;
     if (!bestRuneClasses.test(full)) continue;
     if (selectedPerks.some((perk) => perk.id === id)) continue;
+
     selectedPerks.push({
       id,
       name: decodeHtmlEntities(match[1]),
       url: decodeHtmlEntities((full.match(/src="([^"]+)"/i) || [null, ''])[1]),
       pick_rate: cleanNumber(match[4]) || 0
     });
+
     if (selectedPerks.length >= 6) break;
   }
+
   if (selectedPerks.length >= 4) {
     snapshot.runes = [{ perks: selectedPerks }];
   }
@@ -301,12 +544,13 @@ async function fetchOpggSnapshot(champion) {
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
     }
   });
+
   if (!response.ok) {
     throw new Error(`OP.GG snapshot HTTP ${response.status}`);
   }
 
   const html = await response.text();
-  const payload = scrapeOpggSnapshot(html, champion);
+  const payload = scrapeOpggSnapshot(html);
   opggSnapshotCache.set(champion, { date: today, payload });
   return payload;
 }
@@ -315,6 +559,7 @@ function buildStatbasePayload(championName) {
   const champion = championGgSlug(championName);
   const role = resolveChampionRole(champion);
   const archetype = ROLE_ARCHETYPES[role] || ROLE_ARCHETYPES.fighter;
+
   return {
     data: {
       stats: {
@@ -328,25 +573,6 @@ function buildStatbasePayload(championName) {
     }
   };
 }
-
-app.get('/api/statbase/:champion', async (req, res) => {
-  const championName = req.params.champion;
-  const fallback = buildStatbasePayload(championName);
-  const champion = championGgSlug(championName);
-
-  try {
-    const snapshot = await fetchOpggSnapshot(champion);
-    if (snapshot.stats.win_rate !== null) fallback.data.stats.win_rate = snapshot.stats.win_rate;
-    if (snapshot.stats.pick_rate !== null) fallback.data.stats.pick_rate = snapshot.stats.pick_rate;
-    if (snapshot.stats.ban_rate !== null) fallback.data.stats.ban_rate = snapshot.stats.ban_rate;
-    if (snapshot.builds.length) fallback.data.builds = snapshot.builds;
-    if (snapshot.runes.length) fallback.data.runes = snapshot.runes;
-  } catch (error) {
-    console.warn(`OP.GG snapshot fetch failed for ${champion}:`, error.message);
-  }
-
-  res.json(fallback);
-});
 
 function normalizeChampionGgPayload(payload) {
   const empty = {
@@ -408,9 +634,7 @@ function scrapeChampionGgHtml(html) {
     }
     if (itemIds.length >= 8) break;
   }
-  if (itemIds.length) {
-    normalized.data.builds.push({ items: itemIds });
-  }
+  if (itemIds.length) normalized.data.builds.push({ items: itemIds });
 
   const perkIds = [];
   const perkSeen = new Set();
@@ -422,9 +646,7 @@ function scrapeChampionGgHtml(html) {
     }
     if (perkIds.length >= 6) break;
   }
-  if (perkIds.length) {
-    normalized.data.runes.push({ perks: perkIds });
-  }
+  if (perkIds.length) normalized.data.runes.push({ perks: perkIds });
 
   const matchupPattern = /["']name["']\s*:\s*["']([^"']+)["'][^\n\r]{0,120}?(?:win.?rate|wr)[^0-9]{0,10}([0-9]+(?:\.[0-9]+)?)/gi;
   for (const match of html.matchAll(matchupPattern)) {
@@ -469,9 +691,7 @@ function normalizeUggPayload(payload) {
     }
     if (itemIds.length >= 8) break;
   }
-  if (itemIds.length) {
-    normalized.data.builds.push({ items: itemIds });
-  }
+  if (itemIds.length) normalized.data.builds.push({ items: itemIds });
 
   const perks = [];
   const perkSeen = new Set();
@@ -483,9 +703,7 @@ function normalizeUggPayload(payload) {
     }
     if (perks.length >= 6) break;
   }
-  if (perks.length) {
-    normalized.data.runes.push({ perks });
-  }
+  if (perks.length) normalized.data.runes.push({ perks });
 
   const matchupSeen = new Set();
   for (const match of text.matchAll(/"(?:championName|name)"\s*:\s*"([^"]+)"[^{}]{0,200}?"(?:winRate|win_rate)"\s*:\s*([0-9.]+)/g)) {
@@ -554,6 +772,138 @@ function scrapeUggHtml(html) {
   return normalized;
 }
 
+// -----------------------------
+// Riot helpers
+// -----------------------------
+function riotHeaders() {
+  return {
+    'X-Riot-Token': RIOT_API_KEY,
+    Accept: 'application/json'
+  };
+}
+
+async function riotFetch(url) {
+  const response = await fetch(url, { headers: riotHeaders() });
+
+  if (!response.ok) {
+    let message = `Riot API error ${response.status}`;
+    try {
+      const data = await response.json();
+      if (data && data.status && data.status.message) {
+        message = data.status.message;
+      }
+    } catch (_) {
+      // ignore
+    }
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
+}
+
+function getQueueData(rankedArray, queueType) {
+  return (rankedArray || []).find((entry) => entry.queueType === queueType) || null;
+}
+
+function safeWinRate(wins, losses) {
+  const total = Number(wins || 0) + Number(losses || 0);
+  if (!total) return 0;
+  return Math.round((wins / total) * 100);
+}
+
+function getSoloQueueEntry(ranked) {
+  return Array.isArray(ranked)
+    ? ranked.find((entry) => entry.queueType === 'RANKED_SOLO_5x5') || null
+    : null;
+}
+
+function getFlexQueueEntry(ranked) {
+  return Array.isArray(ranked)
+    ? ranked.find((entry) => entry.queueType === 'RANKED_FLEX_SR') || null
+    : null;
+}
+
+function buildRankSnapshot(entry) {
+  if (!entry) return null;
+
+  return {
+    lp: Number(entry.leaguePoints || 0),
+    wins: Number(entry.wins || 0),
+    losses: Number(entry.losses || 0),
+    tier: entry.tier || null,
+    rank: entry.rank || null
+  };
+}
+
+function didRankRecordChange(previous, current) {
+  if (!previous || !current) return false;
+
+  return (
+    previous.lp !== current.lp ||
+    previous.wins !== current.wins ||
+    previous.losses !== current.losses ||
+    previous.tier !== current.tier ||
+    previous.rank !== current.rank
+  );
+}
+
+function formatMatchParticipant(match, puuid, extra = {}) {
+  const participant = match.info.participants.find((p) => p.puuid === puuid);
+
+  if (!participant) {
+    return {
+      matchId: match.metadata.matchId,
+      queueId: match.info.queueId,
+      gameDuration: match.info.gameDuration,
+      lpChange: extra.lpChange ?? null
+    };
+  }
+
+  return {
+    matchId: match.metadata.matchId,
+    championName: participant.championName,
+    kills: participant.kills,
+    deaths: participant.deaths,
+    assists: participant.assists,
+    win: participant.win,
+    cs: (participant.totalMinionsKilled || 0) + (participant.neutralMinionsKilled || 0),
+    item0: participant.item0,
+    item1: participant.item1,
+    item2: participant.item2,
+    item3: participant.item3,
+    item4: participant.item4,
+    item5: participant.item5,
+    item6: participant.item6,
+    queueId: match.info.queueId,
+    gameDuration: match.info.gameDuration,
+    lpChange: extra.lpChange ?? null
+  };
+}
+
+// -----------------------------
+// Existing endpoints
+// -----------------------------
+app.get('/api/statbase/:champion', async (req, res) => {
+  const championName = req.params.champion;
+  const fallback = buildStatbasePayload(championName);
+  const champion = championGgSlug(championName);
+
+  try {
+    const snapshot = await fetchOpggSnapshot(champion);
+    if (snapshot.stats.win_rate !== null) fallback.data.stats.win_rate = snapshot.stats.win_rate;
+    if (snapshot.stats.pick_rate !== null) fallback.data.stats.pick_rate = snapshot.stats.pick_rate;
+    if (snapshot.stats.ban_rate !== null) fallback.data.stats.ban_rate = snapshot.stats.ban_rate;
+    if (snapshot.builds.length) fallback.data.builds = snapshot.builds;
+    if (snapshot.runes.length) fallback.data.runes = snapshot.runes;
+  } catch (error) {
+    console.warn(`OP.GG snapshot fetch failed for ${champion}:`, error.message);
+  }
+
+  res.json(fallback);
+});
+
 app.get('/api/championgg/:champion', async (req, res) => {
   const champion = championGgSlug(req.params.champion);
   const headers = {
@@ -578,6 +928,7 @@ app.get('/api/championgg/:champion', async (req, res) => {
     }
     const html = await pageResponse.text();
     const scraped = scrapeChampionGgHtml(html);
+
     if (
       scraped.data.stats.win_rate !== null ||
       scraped.data.builds.length ||
@@ -586,6 +937,7 @@ app.get('/api/championgg/:champion', async (req, res) => {
     ) {
       return res.json(scraped);
     }
+
     return res.status(502).json({ error: 'Champion.gg returned no scrapeable data' });
   } catch (error) {
     console.error('Champion.gg scrape error:', error.message);
@@ -605,8 +957,10 @@ app.get('/api/ugg/:champion', async (req, res) => {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
+
     const html = await response.text();
     const scraped = scrapeUggHtml(html);
+
     if (
       scraped.data.stats.win_rate !== null ||
       scraped.data.builds.length ||
@@ -615,6 +969,7 @@ app.get('/api/ugg/:champion', async (req, res) => {
     ) {
       return res.json(scraped);
     }
+
     return res.status(502).json({ error: 'u.gg returned no scrapeable data' });
   } catch (error) {
     console.error('u.gg scrape error:', error.message);
@@ -622,7 +977,6 @@ app.get('/api/ugg/:champion', async (req, res) => {
   }
 });
 
-// OP.GG API endpoint (they have a public stats API)
 app.get('/api/opgg/:region/:champion', async (req, res) => {
   const { region, champion } = req.params;
 
@@ -632,23 +986,22 @@ app.get('/api/opgg/:region/:champion', async (req, res) => {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    console.error('OP.GG API error:', error);
+    console.error('OP.GG API error:', error.message);
     res.status(500).json({ error: 'Failed to fetch OP.GG data', details: error.message });
   }
 });
 
-// Generic proxy endpoint as fallback
 app.get('/api/proxy', async (req, res) => {
   const targetUrl = req.query.url;
-  
+
   if (!targetUrl) {
     return res.status(400).json({ error: 'URL parameter is required' });
   }
@@ -659,9 +1012,9 @@ app.get('/api/proxy', async (req, res) => {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
-    
+
     const contentType = response.headers.get('content-type');
-    
+
     if (contentType && contentType.includes('application/json')) {
       const data = await response.json();
       res.json(data);
@@ -670,12 +1023,279 @@ app.get('/api/proxy', async (req, res) => {
       res.send(text);
     }
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('Proxy error:', error.message);
     res.status(500).json({ error: 'Failed to fetch data', details: error.message });
   }
 });
 
+// -----------------------------
+// Riot endpoints
+// -----------------------------
+app.get('/test', async (req, res) => {
+  try {
+    if (!RIOT_API_KEY) {
+      return res.status(500).json({ error: 'Missing RIOT_API_KEY in .env' });
+    }
+
+    const data = await riotFetch(
+      `https://${ACCOUNT_REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent('ICE IS COMING')}/${encodeURIComponent('OJ9')}`
+    );
+
+    return res.json(data);
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: error.message || 'Failed to fetch Riot test data'
+    });
+  }
+});
+
+app.get('/api/summoner', async (req, res) => {
+  try {
+    const { gameName, tagLine } = req.query;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(25, Math.max(1, Number(req.query.pageSize) || 10));
+    const totalMatchWindow = 50;
+
+    if (!gameName || !tagLine) {
+      return res.status(400).json({ error: 'Missing gameName or tagLine' });
+    }
+
+    const account = await riotFetch(
+      `https://${ACCOUNT_REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`
+    );
+
+    if (!account?.puuid) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const summoner = await riotFetch(
+      `https://${PLATFORM_REGION}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${account.puuid}`
+    );
+
+    const encryptedSummonerId = summoner?.id || null;
+
+    let ranked = [];
+    let rankedWarning = null;
+
+    if (encryptedSummonerId) {
+      try {
+        ranked = await riotFetch(
+          `https://${PLATFORM_REGION}.api.riotgames.com/lol/league/v4/entries/by-summoner/${encryptedSummonerId}`
+        );
+      } catch (rankedError) {
+        rankedWarning = rankedError.message || 'Failed to load ranked data.';
+        ranked = [];
+      }
+    } else {
+      rankedWarning = null;
+    }
+
+    const soloEntry = getSoloQueueEntry(ranked);
+    const flexEntry = getFlexQueueEntry(ranked);
+
+    let playerLpHistory = getPlayerLpHistory(account.puuid);
+
+    const matchIds = await riotFetch(
+      `https://${ACCOUNT_REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${account.puuid}/ids?start=0&count=${totalMatchWindow}`
+    );
+
+    const totalMatches = Array.isArray(matchIds) ? matchIds.length : 0;
+    const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
+    const safePage = Math.min(page, totalPages);
+    const startIndex = (safePage - 1) * pageSize;
+    const pageMatchIds = matchIds.slice(startIndex, startIndex + pageSize);
+
+    const matches = await Promise.all(
+      pageMatchIds.map((matchId) =>
+        riotFetch(`https://${ACCOUNT_REGION}.api.riotgames.com/lol/match/v5/matches/${matchId}`)
+      )
+    );
+
+    const matchMeta = matches.map((match) => ({
+      matchId: match?.metadata?.matchId,
+      queueId: match?.info?.queueId,
+      timestamp: Number(
+        match?.info?.gameEndTimestamp ||
+        ((match?.info?.gameCreation || 0) + (Number(match?.info?.gameDuration || 0) * 1000)) ||
+        Date.now()
+      )
+    }));
+
+    let recentMatches = matches.map((match) => formatMatchParticipant(match, account.puuid));
+
+    if (safePage === 1 && Array.isArray(ranked) && ranked.length) {
+      playerLpHistory = updateLpHistory(account.puuid, 'RANKED_SOLO_5x5', soloEntry, matchMeta);
+      playerLpHistory = updateLpHistory(account.puuid, 'RANKED_FLEX_SR', flexEntry, matchMeta);
+    }
+
+    recentMatches = calculateLpChanges(recentMatches, playerLpHistory);
+
+    saveLpCache(lpCache);
+
+    return res.json({
+      account,
+      summoner,
+      ranked,
+      rankedWarning,
+      matchIds,
+      recentMatches,
+      pagination: {
+        page: safePage,
+        pageSize,
+        totalPages,
+        totalMatches
+      }
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: error.message || 'Riot API request failed'
+    });
+  }
+});
+
+app.get('/api/debug-summoner', async (req, res) => {
+  const { gameName, tagLine } = req.query;
+
+  if (!gameName || !tagLine) {
+    return res.status(400).json({ error: 'Missing gameName or tagLine' });
+  }
+
+  const steps = {};
+
+  try {
+    const accountUrl = `https://${ACCOUNT_REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
+    const account = await riotFetch(accountUrl);
+    steps.account = { ok: true, url: accountUrl, data: account };
+
+    const summonerUrl = `https://${PLATFORM_REGION}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${account.puuid}`;
+    const summoner = await riotFetch(summonerUrl);
+    steps.summoner = { ok: true, url: summonerUrl, data: summoner };
+
+    if (!summoner?.id) {
+      steps.ranked = {
+        ok: false,
+        reason: 'Missing summoner.id',
+        summoner
+      };
+    } else {
+      const encryptedSummonerId = summoner.id;
+      const rankedUrl = `https://${PLATFORM_REGION}.api.riotgames.com/lol/league/v4/entries/by-summoner/${encryptedSummonerId}`;
+      const ranked = await riotFetch(rankedUrl);
+      steps.ranked = { ok: true, url: rankedUrl, data: ranked };
+    }
+
+    const matchUrl = `https://${ACCOUNT_REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${account.puuid}/ids?start=0&count=5`;
+    const matches = await riotFetch(matchUrl);
+    steps.matches = { ok: true, url: matchUrl, data: matches };
+
+    return res.json(steps);
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: error.message || 'Debug request failed',
+      steps
+    });
+  }
+});
+
+// -----------------------------
+// Match Timeline Endpoint
+// -----------------------------
+app.get('/api/match-timeline/:matchId', async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const { puuid } = req.query;
+
+    if (!matchId) {
+      return res.status(400).json({ error: 'Missing matchId' });
+    }
+
+    if (!puuid) {
+      return res.status(400).json({ error: 'Missing puuid' });
+    }
+
+    const match = await riotFetch(
+      `https://${ACCOUNT_REGION}.api.riotgames.com/lol/match/v5/matches/${matchId}`
+    );
+
+    const timeline = await riotFetch(
+      `https://${ACCOUNT_REGION}.api.riotgames.com/lol/match/v5/matches/${matchId}/timeline`
+    );
+
+    const participant = Array.isArray(match?.info?.participants)
+      ? match.info.participants.find((p) => p.puuid === puuid)
+      : null;
+
+    if (!participant) {
+      return res.status(404).json({ error: 'Participant not found in match' });
+    }
+
+    const participantId = participant.participantId;
+    const frames = Array.isArray(timeline?.info?.frames) ? timeline.info.frames : [];
+
+    if (!frames.length) {
+      return res.json({
+        matchId,
+        puuid,
+        kda: {
+          kills: Number(participant.kills || 0),
+          deaths: Number(participant.deaths || 0),
+          assists: Number(participant.assists || 0)
+        },
+        milestones: []
+      });
+    }
+
+    const milestoneMinutes = [4, 8, 12, 16, 20, 24, 28, 32];
+    const milestones = [];
+
+    for (const minute of milestoneMinutes) {
+      const frame = frames.find((f) => Math.floor((f.timestamp || 0) / 60000) >= minute);
+      if (!frame) continue;
+
+      const pf =
+        frame.participantFrames?.[String(participantId)] ??
+        frame.participantFrames?.[participantId];
+
+      if (!pf) continue;
+
+      milestones.push({
+        minute,
+        level: Number(pf.level || 0),
+        cs: Number(pf.minionsKilled || 0) + Number(pf.jungleMinionsKilled || 0),
+        totalGold: Number(pf.totalGold || 0)
+      });
+    }
+
+    return res.json({
+      matchId,
+      puuid,
+      kda: {
+        kills: Number(participant.kills || 0),
+        deaths: Number(participant.deaths || 0),
+        assists: Number(participant.assists || 0)
+      },
+      milestones
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: error.message || 'Failed to load timeline'
+    });
+  }
+});
+
+app.get('/debug-key', (req, res) => {
+  const key = (process.env.RIOT_API_KEY || '').trim();
+
+  res.json({
+    exists: !!key,
+    startsWithRGAPI: key.startsWith('RGAPI-'),
+    length: key.length,
+    preview: key ? key.slice(0, 10) + '...' : null
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`Proxy server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Open http://localhost:${PORT}/index.html to view your app`);
+  console.log(`Riot key loaded: ${RIOT_API_KEY ? 'yes' : 'no'}`);
 });

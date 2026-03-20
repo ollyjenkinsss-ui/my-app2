@@ -10,21 +10,28 @@
   body {
     margin: 0;
     font-family: "Barlow Condensed", sans-serif;
-    background: linear-gradient(120deg, #0b0f25, #151b40);
-    color: #fff;
+    background:
+      radial-gradient(circle at top left, rgba(55, 110, 255, 0.12), transparent 28%),
+      radial-gradient(circle at top right, rgba(167, 91, 255, 0.10), transparent 26%),
+      linear-gradient(135deg, #07111f 0%, #0c1730 48%, #101d3f 100%);
+    color: #eef3ff;
     min-height: 100vh;
   }
   body.light {
-    background: linear-gradient(120deg, #f5f5f5, #dcdcdc);
-    color: #111;
+    background:
+      radial-gradient(circle at top left, rgba(76, 132, 255, 0.10), transparent 28%),
+      radial-gradient(circle at top right, rgba(159, 101, 255, 0.08), transparent 24%),
+      linear-gradient(135deg, #eef3ff 0%, #e4ebff 50%, #dbe4ff 100%);
+    color: #102247;
   }
 
   #header {
     width: 100%;
     box-sizing: border-box;
-    padding: 8px clamp(10px, 2vw, 20px);
-    background: rgba(20, 30, 60, 0.85);
-    backdrop-filter: blur(10px);
+    padding: 12px clamp(12px, 2vw, 28px);
+    background: rgba(10, 17, 36, 0.82);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(115, 152, 255, 0.14);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -32,17 +39,23 @@
     top: 0;
     z-index: 10;
   }
-  body.light #header { background: rgba(255, 255, 255, 0.85); }
+  body.light #header {
+    background: rgba(240, 244, 255, 0.88);
+    border-bottom-color: rgba(93, 120, 195, 0.18);
+  }
   #header a {
-    color: #a5b4fc;
+    color: #cbd7ff;
     text-decoration: none;
     font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 12px;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
   }
-  #header a.active { color: #fff; }
-  body.light #header a.active { color: #111; }
-  #header a:hover { color: #fff; }
-  body.light #header a { color: #3b3b3b; }
-  body.light #header a:hover { color: #111; }
+  #header a.active { background: rgba(99, 140, 255, 0.16); color: #fff; }
+  body.light #header a.active { color: #102247; }
+  #header a:hover { background: rgba(99, 140, 255, 0.16); color: #fff; transform: translateY(-1px); }
+  body.light #header a { color: #27406f; }
+  body.light #header a:hover { color: #102247; background: rgba(89, 126, 232, 0.14); }
 
   .toggle-container { display: flex; align-items: center; margin-right: clamp(8px, 2vw, 20px); }
   .toggle-wrapper { display: flex; align-items: center; cursor: pointer; }
@@ -288,6 +301,7 @@
       <a href="patch-notes.html">Patch Notes</a>
       <a href="newest-champion.html">Newest Champion</a>
       <a href="items.html">Items</a>
+      <a href="match-history.html">Match History</a>
     </div>
     <div class="toggle-container">
       <div class="toggle-wrapper" onclick="toggleDarkMode()">

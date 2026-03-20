@@ -7,6 +7,49 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(55, 110, 255, 0.12), transparent 28%),
+      radial-gradient(circle at top right, rgba(167, 91, 255, 0.10), transparent 26%),
+      linear-gradient(135deg, #07111f 0%, #0c1730 48%, #101d3f 100%);
+    color: #eef3ff;
+  }
+  body.light {
+    background:
+      radial-gradient(circle at top left, rgba(76, 132, 255, 0.10), transparent 28%),
+      radial-gradient(circle at top right, rgba(159, 101, 255, 0.08), transparent 24%),
+      linear-gradient(135deg, #eef3ff 0%, #e4ebff 50%, #dbe4ff 100%);
+    color: #102247;
+  }
+  #header {
+    padding: 12px clamp(12px, 2vw, 28px);
+    background: rgba(10, 17, 36, 0.82);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(115, 152, 255, 0.14);
+  }
+  body.light #header {
+    background: rgba(240, 244, 255, 0.88);
+    border-bottom-color: rgba(93, 120, 195, 0.18);
+  }
+  #header a {
+    color: #cbd7ff;
+    padding: 8px 12px;
+    border-radius: 12px;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+  #header a:hover,
+  #header a.active {
+    background: rgba(99, 140, 255, 0.16);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+  body.light #header a { color: #27406f; }
+  body.light #header a:hover,
+  body.light #header a.active {
+    color: #102247;
+    background: rgba(89, 126, 232, 0.14);
+  }
+
   .item-detail-card {
     background: linear-gradient(160deg, #0e1630 0%, #101a33 100%);
     border: 1px solid rgba(119, 163, 255, 0.22);
@@ -101,6 +144,7 @@
       <a href="patch-notes.html">Patch Notes</a>
       <a href="newest-champion.html">Newest Champion</a>
       <a href="items.html">Items</a>
+      <a href="match-history.html">Match History</a>
     </div>
     <div class="toggle-container">
       <div class="toggle-wrapper" onclick="toggleDarkMode()">
