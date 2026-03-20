@@ -206,6 +206,8 @@ const OPGG_STATS_URL = "https://r.jina.ai/http://www.op.gg/champions";
 let champs=[], currentPage=1, filteredChamps=[];
 const champsPerPage=20;
 let liveRatesByChampion = {};
+const liveRatesBySlug = {};
+let activeChampionRequestId = 0;
 
 // Dark mode toggle
 function toggleDarkMode(){
@@ -256,6 +258,53 @@ async function loadLiveChampionRates(){
     liveRatesByChampion = {};
     return liveRatesByChampion;
   }
+}
+
+function candidateOpggSlugs(championId, championName){
+  const base = [
+    normalizeChampionName(championId),
+    normalizeChampionName(championName)
+  ].filter(Boolean);
+  const aliases = {
+    monkeyking: "wukong",
+    nunuandwillump: "nunu",
+    chogath: "chogath",
+    kogmaw: "kogmaw",
+    reksai: "reksai",
+    velkoz: "velkoz",
+    kaisa: "kaisa",
+    khazix: "khazix"
+  };
+  const expanded = [];
+  base.forEach((slug) => {
+    expanded.push(slug);
+    if (aliases[slug]) expanded.push(aliases[slug]);
+  });
+  return [...new Set(expanded)];
+}
+
+async function fetchChampionRatesFromPage(championId, championName){
+  const slugs = candidateOpggSlugs(championId, championName);
+  const pattern = /_Win rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Pick rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Ban rate_\*\*([0-9.]+)%\*\*/i;
+  for (const slug of slugs){
+    if (liveRatesBySlug[slug]) return liveRatesBySlug[slug];
+    try{
+      const url = `https://r.jina.ai/http://www.op.gg/lol/champions/${slug}/build`;
+      const text = await (await fetch(url, { cache: "no-store" })).text();
+      const m = text.match(pattern);
+      if (!m) continue;
+      const rates = {
+        win: clampRate(m[1]),
+        pick: clampRate(m[2]),
+        ban: clampRate(m[3])
+      };
+      liveRatesBySlug[slug] = rates;
+      return rates;
+    }catch(_error){
+      // Try the next candidate slug.
+    }
+  }
+  return null;
 }
 
 // Load champions, remove Doom Bots and "None", sort alphabetically
@@ -320,19 +369,20 @@ function changePage(dir){
 
 // Show champion details
 async function showChampion(c){ 
+  const requestId = ++activeChampionRequestId;
   const d=document.getElementById("details"); 
   const contentDiv=document.getElementById("content");
   contentDiv.classList.remove('show');
   d.innerText="Loading…";
   try{
-    const rates = await loadLiveChampionRates();
     const champData = await (await fetch(`${DDRAGON_BASE_URL}/${c.version}/data/en_US/champion/${c.id}.json`)).json();
+    if (requestId !== activeChampionRequestId) return;
     const champion = champData?.data?.[c.id];
     if (!champion) throw new Error("Champion detail data missing.");
-    const live = rates[normalizeChampionName(champion.name)] || rates[normalizeChampionName(c.id)] || null;
-    const win = live && live.win !== null ? live.win : null;
-    const pick = live && live.pick !== null ? live.pick : null;
-    const ban = live && live.ban !== null ? live.ban : null;
+    const initial = liveRatesByChampion[normalizeChampionName(champion.name)] || liveRatesByChampion[normalizeChampionName(c.id)] || null;
+    const win = initial && initial.win !== null ? initial.win : null;
+    const pick = initial && initial.pick !== null ? initial.pick : null;
+    const ban = initial && initial.ban !== null ? initial.ban : null;
     const tierTarget = win === null ? 50 : win;
     const abilities=[...(champion.passive?[{
       key:"Passive",
@@ -348,13 +398,52 @@ async function showChampion(c){
     d.innerHTML=`
       <h2>${champion.name} (${tierLabel(tierTarget)})</h2>
       <img src="${c.image}" class="champ" width="140" alt="${champion.name}"><br>
-      <p>Win: ${formatRate(win)}</p><div class="bar"><div class="fill win" style="width:${win ?? 0}%">${formatRate(win)}</div></div>
-      <p>Pick: ${formatRate(pick)}</p><div class="bar"><div class="fill pick" style="width:${pick ?? 0}%">${formatRate(pick)}</div></div>
-      <p>Ban: ${formatRate(ban)}</p><div class="bar"><div class="fill ban" style="width:${ban ?? 0}%">${formatRate(ban)}</div></div>
+      <p>Win: <span id="winRateValue">${formatRate(win)}</span></p><div class="bar"><div id="winRateBar" class="fill win" style="width:${win ?? 0}%">${formatRate(win)}</div></div>
+      <p>Pick: <span id="pickRateValue">${formatRate(pick)}</span></p><div class="bar"><div id="pickRateBar" class="fill pick" style="width:${pick ?? 0}%">${formatRate(pick)}</div></div>
+      <p>Ban: <span id="banRateValue">${formatRate(ban)}</span></p><div class="bar"><div id="banRateBar" class="fill ban" style="width:${ban ?? 0}%">${formatRate(ban)}</div></div>
       <h3>Abilities</h3><ul>${abilities.map(a=>`<li><span class="ability-name" title="${a.tooltip.replace(/"/g,"&quot;")}">${a.key} - ${a.name}</span></li>`).join("")}</ul>`;
 
-    setTimeout(()=>contentDiv.classList.add('show'),100);
-  }catch(e){d.innerText="Failed to load details."; console.error(e);}
+    setTimeout(()=>{
+      if (requestId === activeChampionRequestId) contentDiv.classList.add('show');
+    },100);
+
+    // Resolve live rates in background so champion details render immediately.
+    (async () => {
+      try {
+        const rates = await loadLiveChampionRates();
+        if (requestId !== activeChampionRequestId) return;
+        let live = rates[normalizeChampionName(champion.name)] || rates[normalizeChampionName(c.id)] || null;
+        if (!live) {
+          live = await fetchChampionRatesFromPage(c.id, champion.name);
+          if (requestId !== activeChampionRequestId) return;
+          if (live) {
+            rates[normalizeChampionName(champion.name)] = live;
+            rates[normalizeChampionName(c.id)] = live;
+          }
+        }
+        if (!live) return;
+        const updateRate = (valueId, barId, rate) => {
+          const text = formatRate(rate);
+          const valueEl = document.getElementById(valueId);
+          const barEl = document.getElementById(barId);
+          if (valueEl) valueEl.textContent = text;
+          if (barEl) {
+            barEl.style.width = `${rate ?? 0}%`;
+            barEl.textContent = text;
+          }
+        };
+        updateRate("winRateValue", "winRateBar", live.win);
+        updateRate("pickRateValue", "pickRateBar", live.pick);
+        updateRate("banRateValue", "banRateBar", live.ban);
+      } catch (error) {
+        console.error(error);
+      }
+    })();
+  }catch(e){
+    if (requestId !== activeChampionRequestId) return;
+    d.innerText="Failed to load details.";
+    console.error(e);
+  }
 }
 
 document.getElementById("search").oninput = ()=>{
