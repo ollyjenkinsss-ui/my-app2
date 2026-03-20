@@ -1,207 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Newest Champion</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    color-scheme: dark;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Newest Champion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
 
-  body {
-    margin: 0;
-    font-family: "Barlow Condensed", sans-serif;
-    background: linear-gradient(120deg, #0b0f25, #151b40);
-    color: #fff;
-    min-height: 100vh;
-  }
-  body.light {
-    background: linear-gradient(120deg, #f5f5f5, #dcdcdc);
-    color: #111;
-  }
+    body {
+      margin: 0;
+      font-family: "Barlow Condensed", sans-serif;
+      background: linear-gradient(120deg, #0b0f25, #151b40);
+      color: #fff;
+      min-height: 100vh;
+    }
 
-  #header {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px clamp(10px, 2vw, 20px);
-    background: rgba(20, 30, 60, 0.85);
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    box-sizing: border-box;
-  }
+    body.light {
+      background: linear-gradient(120deg, #f5f5f5, #dcdcdc);
+      color: #111;
+    }
 
-  #header a {
-    color: #a5b4fc;
-    text-decoration: none;
-    font-weight: 600;
-  }
+    #header {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px clamp(10px, 2vw, 20px);
+      background: rgba(20, 30, 60, 0.85);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-sizing: border-box;
+    }
 
-  #header a.active {
-    color: #fff;
-  }
-  body.light #header a.active {
-    color: #111;
-  }
+    #header a {
+      color: #a5b4fc;
+      text-decoration: none;
+      font-weight: 600;
+    }
 
-  #header a:hover {
-    color: #fff;
-  }
-  body.light #header {
-    background: rgba(255, 255, 255, 0.85);
-  }
-  body.light #header a {
-    color: #3b3b3b;
-  }
-  body.light #header a:hover {
-    color: #111;
-  }
+    #header a.active {
+      color: #fff;
+    }
 
-  .toggle-container {
-    display: flex;
-    align-items: center;
-    margin-right: clamp(8px, 2vw, 20px);
-  }
-  .toggle-wrapper {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-  }
-  .toggle-switch {
-    width: 50px;
-    height: 26px;
-    background: #1f273d;
-    border-radius: 13px;
-    position: relative;
-    transition: background 0.3s;
-  }
-  body.light .toggle-switch {
-    background: #d1d1d1;
-  }
-  .toggle-knob {
-    width: 24px;
-    height: 24px;
-    background: #fff;
-    border-radius: 50%;
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.3s;
-  }
-  body.light .toggle-knob {
-    transform: translateX(24px);
-  }
+    body.light #header a.active {
+      color: #111;
+    }
 
-  .container {
-    width: 100%;
-    max-width: min(1500px, 96vw);
-    margin: 12px auto 28px;
-    padding: 0 clamp(10px, 2vw, 28px);
-    box-sizing: border-box;
-  }
+    #header a:hover {
+      color: #fff;
+    }
 
-  .card {
-    background: rgba(20, 30, 60, 0.8);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
-  }
-  body.light .card {
-    background: rgba(255, 255, 255, 0.75);
-    color: #111;
-  }
+    body.light #header {
+      background: rgba(255, 255, 255, 0.85);
+    }
 
-  .top-row {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
+    body.light #header a {
+      color: #3b3b3b;
+    }
 
-  .champ-icon {
-    width: 110px;
-    height: 110px;
-    border-radius: 14px;
-    object-fit: cover;
-    background: rgba(255, 255, 255, 0.08);
-  }
+    body.light #header a:hover {
+      color: #111;
+    }
 
-  h1, h2 {
-    margin: 0 0 8px;
-    letter-spacing: 0.4px;
-  }
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      margin-right: clamp(8px, 2vw, 20px);
+    }
 
-  p {
-    margin: 0;
-    color: #dbe3ff;
-  }
-  body.light p {
-    color: #2c2c44;
-  }
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
 
-  .video-wrap {
-    position: relative;
-    width: 100%;
-    padding-top: 56.25%;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #080b18;
-  }
+    .toggle-switch {
+      width: 50px;
+      height: 26px;
+      background: #1f273d;
+      border-radius: 13px;
+      position: relative;
+      transition: background 0.3s;
+    }
 
-  .video-wrap iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-  }
+    body.light .toggle-switch {
+      background: #d1d1d1;
+    }
 
-  .ability-list {
-    list-style: none;
-    padding: 0;
-    margin: 12px 0 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 10px;
-  }
+    .toggle-knob {
+      width: 24px;
+      height: 24px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s;
+    }
 
-  .ability-list li {
-    background: rgba(11, 20, 45, 0.8);
-    border-radius: 10px;
-    padding: 10px 12px;
-  }
-  body.light .ability-list li {
-    background: rgba(220, 220, 220, 0.9);
-  }
+    body.light .toggle-knob {
+      transform: translateX(24px);
+    }
 
-  .ability-key {
-    color: #a5b4fc;
-    font-weight: 700;
-    margin-right: 6px;
-  }
-  body.light .ability-key {
-    color: #5a5aaf;
-  }
+    .container {
+      width: 100%;
+      max-width: min(1500px, 96vw);
+      margin: 12px auto 28px;
+      padding: 0 clamp(10px, 2vw, 28px);
+      box-sizing: border-box;
+    }
 
-  .status {
-    font-size: 20px;
-    opacity: 0.95;
-  }
-  body.light .status {
-    color: #3f3f5f;
-  }
-</style>
+    .card {
+      background: rgba(20, 30, 60, 0.8);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+    }
+
+    body.light .card {
+      background: rgba(255, 255, 255, 0.75);
+      color: #111;
+    }
+
+    .top-row {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .champ-icon {
+      width: 110px;
+      height: 110px;
+      border-radius: 14px;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 8px;
+      letter-spacing: 0.4px;
+    }
+
+    p {
+      margin: 0;
+      color: #dbe3ff;
+    }
+
+    body.light p {
+      color: #2c2c44;
+    }
+
+    .video-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #080b18;
+    }
+
+    .video-wrap iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .ability-list {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .ability-list li {
+      background: rgba(11, 20, 45, 0.8);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    body.light .ability-list li {
+      background: rgba(220, 220, 220, 0.9);
+    }
+
+    .ability-key {
+      color: #a5b4fc;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+
+    body.light .ability-key {
+      color: #5a5aaf;
+    }
+
+    .status {
+      font-size: 20px;
+      opacity: 0.95;
+    }
+
+    body.light .status {
+      color: #3f3f5f;
+    }
+  </style>
 </head>
+
 <body>
   <div id="header">
     <div style="display:flex; gap:clamp(8px,1.5vw,16px); align-items:center; flex-wrap:wrap;">
@@ -232,13 +250,9 @@
         </div>
       </div>
     </div>
-
-    <div id="videoCard" class="card" style="display:none;">
-      <h2>Spotlight Video</h2>
-      <p style="margin-bottom:12px;">Direct YouTube search link (reliable fallback when embeds are blocked).</p>
-      <a id="champVideoLink" href="#" target="_blank" rel="noopener noreferrer" style="color:#a5b4fc; font-weight:700;">
-        Watch latest spotlight on YouTube
-      </a>
+    <div id="loreCard" class="card" style="display:none;">
+      <h2>Detailed Lore Explanation</h2>
+      <div id="fandomLore" style="font-size:16px; opacity:0.9;">Loading detailed explanation from Fandom...</div>
     </div>
 
     <div id="abilitiesCard" class="card" style="display:none;">
@@ -247,120 +261,123 @@
     </div>
   </div>
 
-<script>
-const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
-const DDRAGON_BASE_URL = "https://ddragon.leagueoflegends.com/cdn";
-const NEWEST_CANDIDATES = [
-  "Zaahen",
-  "Yunara",
-  "Mel",
-  "Ambessa",
-  "Smolder",
-  "Hwei",
-  "Briar",
-  "Naafiri",
-  "Milio",
-  "KSante"
-];
+  <script>
+    const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
+    const DDRAGON_BASE_URL = "https://ddragon.leagueoflegends.com/cdn";
+    const NEWEST_CANDIDATES = [
+      "Zaahen",
+      "Yunara",
+      "Mel",
+      "Ambessa",
+      "Smolder",
+      "Hwei",
+      "Briar",
+      "Naafiri",
+      "Milio",
+      "KSante"
+    ];
 
-function buildSpotlightSearchUrl(championName) {
-  const query = encodeURIComponent(`"${championName}" "Champion Spotlight" "League of Legends"`);
-  return `https://www.youtube.com/results?search_query=${query}&sp=CAI%253D`;
-}
-
-function applyStoredTheme() {
-  const stored = localStorage.getItem('theme');
-  const isLight = stored === 'light';
-  document.body.classList.toggle('light', isLight);
-  const icon = document.getElementById('toggleIcon');
-  if (icon) icon.textContent = isLight ? '🌞' : '🌙';
-}
-
-function toggleDarkMode() {
-  const nextIsLight = !document.body.classList.contains('light');
-  document.body.classList.toggle('light', nextIsLight);
-  localStorage.setItem('theme', nextIsLight ? 'light' : 'dark');
-  const icon = document.getElementById('toggleIcon');
-  if (icon) icon.textContent = nextIsLight ? '🌞' : '🌙';
-}
-
-async function loadNewestChampion() {
-  const status = document.getElementById("status");
-  const champName = document.getElementById("champName");
-  const champSubtitle = document.getElementById("champSubtitle");
-  const champIcon = document.getElementById("champIcon");
-  const champVideoLink = document.getElementById("champVideoLink");
-  const abilityList = document.getElementById("abilityList");
-
-  try {
-    const versions = await (await fetch(DDRAGON_VERSIONS_URL, { cache: "no-store" })).json();
-    const latestVersion = Array.isArray(versions) && versions[0] ? versions[0] : null;
-    if (!latestVersion) {
-      throw new Error("Could not resolve latest Data Dragon version.");
+    function buildSpotlightSearchUrl(championName) {
+      const query = encodeURIComponent(`"${championName}" "Champion Spotlight" "League of Legends"`);
+      return `https://www.youtube.com/results?search_query=${query}&sp=CAI%253D`;
     }
 
-    const summaryUrl = `${DDRAGON_BASE_URL}/${latestVersion}/data/en_US/champion.json`;
-    const summary = await (await fetch(summaryUrl, { cache: "no-store" })).json();
-    const champions = Object.values(summary?.data || {}).filter(
-      (c) => c && c.id && c.name && !Number.isNaN(Number(c.key))
-    );
-    if (!champions.length) {
-      throw new Error("No champion release data was returned.");
+    function applyStoredTheme() {
+      const stored = localStorage.getItem('theme');
+      const isLight = stored === 'light';
+      document.body.classList.toggle('light', isLight);
+      const icon = document.getElementById('toggleIcon');
+      if (icon) icon.textContent = isLight ? '🌞' : '🌙';
     }
 
-    // Data Dragon has no releaseDate. Prefer known recent releases if present,
-    // then fall back to highest numeric key.
-    const newest =
-      NEWEST_CANDIDATES.map((id) => champions.find((c) => c.id === id)).find(Boolean) ||
-      champions.reduce((latest, champ) =>
-        Number(champ.key) > Number(latest.key) ? champ : latest
-      );
-
-    const detailsUrl = `${DDRAGON_BASE_URL}/${latestVersion}/data/en_US/champion/${newest.id}.json`;
-    const detailsPayload = await (await fetch(detailsUrl, { cache: "no-store" })).json();
-    const details = detailsPayload?.data?.[newest.id];
-    if (!details) {
-      throw new Error("Champion details could not be loaded.");
+    function toggleDarkMode() {
+      const nextIsLight = !document.body.classList.contains('light');
+      document.body.classList.toggle('light', nextIsLight);
+      localStorage.setItem('theme', nextIsLight ? 'light' : 'dark');
+      const icon = document.getElementById('toggleIcon');
+      if (icon) icon.textContent = nextIsLight ? '🌞' : '🌙';
     }
 
-    champName.textContent = details.name || newest.name;
-    champSubtitle.textContent = details.title || "Newest released champion";
-    champIcon.src = `${DDRAGON_BASE_URL}/${latestVersion}/img/champion/${newest.id}.png`;
-    champIcon.onerror = () => {
-      champIcon.src = "https://via.placeholder.com/110?text=?";
-    };
+    async function loadNewestChampion() {
+      const status = document.getElementById("status");
+      const champName = document.getElementById("champName");
+      const champSubtitle = document.getElementById("champSubtitle");
+      const champIcon = document.getElementById("champIcon");
+      const abilityList = document.getElementById("abilityList");
 
-    champVideoLink.href = buildSpotlightSearchUrl(details.name);
-    champVideoLink.textContent = `Watch ${details.name} spotlight on YouTube`;
+      try {
+        const versions = await (await fetch(DDRAGON_VERSIONS_URL, { cache: "no-store" })).json();
+        const latestVersion = Array.isArray(versions) && versions[0] ? versions[0] : null;
+        if (!latestVersion) {
+          throw new Error("Could not resolve latest Data Dragon version.");
+        }
 
-    const abilities = [];
-    if (details.passive && details.passive.name) {
-      abilities.push({ key: "Passive", name: details.passive.name });
+        const summaryUrl = `${DDRAGON_BASE_URL}/${latestVersion}/data/en_US/champion.json`;
+        const summary = await (await fetch(summaryUrl, { cache: "no-store" })).json();
+        const champions = Object.values(summary?.data || {}).filter(
+          (c) => c && c.id && c.name && !Number.isNaN(Number(c.key))
+        );
+        if (!champions.length) {
+          throw new Error("No champion release data was returned.");
+        }
+
+        // Data Dragon has no releaseDate. Prefer known recent releases if present,
+        // then fall back to highest numeric key.
+        const newest =
+          NEWEST_CANDIDATES.map((id) => champions.find((c) => c.id === id)).find(Boolean) ||
+          champions.reduce((latest, champ) =>
+            Number(champ.key) > Number(latest.key) ? champ : latest
+          );
+
+        const detailsUrl = `${DDRAGON_BASE_URL}/${latestVersion}/data/en_US/champion/${newest.id}.json`;
+        const detailsPayload = await (await fetch(detailsUrl, { cache: "no-store" })).json();
+        const details = detailsPayload?.data?.[newest.id];
+        if (!details) {
+          throw new Error("Champion details could not be loaded.");
+        }
+
+        champName.textContent = "Zaahen";
+        champSubtitle.textContent = "The Unbroken Darkin";
+        champIcon.src = "https://static.bigbrain.gg/assets/lol/riot_static/16.6.1/img/champion/Zaahen.webp";
+
+        const abilities = [];
+        if (details.passive && details.passive.name) {
+          abilities.push({ key: "Passive", name: details.passive.name });
+        }
+        if (Array.isArray(details.spells)) {
+          const keys = ["Q", "W", "E", "R"];
+          details.spells.forEach((spell, i) => {
+            abilities.push({ key: keys[i] || "Skill", name: spell.name || "Unknown Ability" });
+          });
+        }
+
+        abilityList.innerHTML = abilities
+          .map((a) => `<li><span class="ability-key">${a.key}</span>${a.name}</li>`)
+          .join("");
+
+        document.getElementById("championInfo").style.display = "block";
+        document.getElementById("abilitiesCard").style.display = "block";
+        document.getElementById("loreCard").style.display = "block";
+        status.textContent = `${details.name} loaded successfully! Loading expanded Fandom lore...`;
+
+        // Use hardcoded lore for Zaahen as requested
+        const zaahenLore = `
+      <p style="margin-bottom:12px; line-height:1.6;"><strong>Zaahen, The Unbroken Darkin</strong>, is a fallen god wielding both divine and profane power. He is a noble Darkin who notably turned against his own kind during the Great Darkin War. Unlike other corrupted Darkin, Zaahen fought alongside mortals and willingly chose to be sealed away after witnessing the rampant ruin caused by his brethren. He feared the destructive potential of his true Darkin form and the possibility of losing complete control.</p>
+      <p style="margin-bottom:12px; line-height:1.6;">Once sealed within his powerful glaive to stave off madness, he is now free with a noble heart and vicious purpose. Zaahen fights an eternal war within himself to prevent Runeterra's ruin. He actively hunts other corrupted Darkin to stop their rampage, all while battling the very blood magic that threatens to consume his sanity.</p>
+    `;
+        document.getElementById("fandomLore").innerHTML = zaahenLore;
+        status.textContent = `${details.name || "Zaahen"} loaded successfully with full lore!`;
+
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Could not load newest champion data right now. Refresh and try again.";
+      }
     }
-    if (Array.isArray(details.spells)) {
-      const keys = ["Q", "W", "E", "R"];
-      details.spells.forEach((spell, i) => {
-        abilities.push({ key: keys[i] || "Skill", name: spell.name || "Unknown Ability" });
-      });
-    }
 
-    abilityList.innerHTML = abilities
-      .map((a) => `<li><span class="ability-key">${a.key}</span>${a.name}</li>`)
-      .join("");
-
-    document.getElementById("championInfo").style.display = "block";
-    document.getElementById("videoCard").style.display = "block";
-    document.getElementById("abilitiesCard").style.display = "block";
-    status.textContent = "Newest champion loaded. If YouTube embed fails (error 153), use the link below.";
-  } catch (error) {
-    console.error(error);
-    status.textContent = "Could not load newest champion data right now. Refresh and try again.";
-  }
-}
-
-applyStoredTheme();
-loadNewestChampion();
-</script>
-<script src="page-transitions.js"></script>
+    applyStoredTheme();
+    loadNewestChampion();
+  </script>
+  <script src="page-transitions.js"></script>
 </body>
+
 </html>

@@ -159,19 +159,96 @@
   ul.tips { margin: 8px 0 0; padding-left: 20px; }
   ul.tips li { margin-bottom: 6px; line-height: 1.45; }
 
-  .skins { display: flex; flex-wrap: wrap; gap: 8px; }
-  .skin-pill {
-    padding: 4px 10px; border-radius: 8px;
-    background: rgba(30, 40, 70, 0.6);
-    font-size: 14px;
+  /* Skin Carousel */
+  .skin-carousel {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(165,180,252,0.4) transparent;
   }
-  body.light .skin-pill { background: rgba(200, 200, 220, 0.5); }
+  .skin-carousel::-webkit-scrollbar { height: 5px; }
+  .skin-carousel::-webkit-scrollbar-thumb { background: rgba(165,180,252,0.4); border-radius: 4px; }
+  .skin-slide {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    width: clamp(200px, 30vw, 340px);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(165,180,252,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .skin-slide:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .skin-slide img { width: 100%; display: block; object-fit: cover; aspect-ratio: 16/9; }
+  .skin-slide-label {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.75));
+    padding: 24px 10px 8px;
+    font-size: 14px; font-weight: 600; text-align: center;
+  }
+
+  /* Recommended Build */
+  .build-items-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .build-item {
+    border-radius: 10px; overflow: hidden;
+    border: 1px solid rgba(165,180,252,0.25);
+    background: rgba(11,20,45,0.6);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .build-item:hover { transform: scale(1.12); box-shadow: 0 4px 16px rgba(165,180,252,0.3); }
+  .build-item img { display: block; width: 52px; height: 52px; }
+  .runes-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .rune-item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+  .rune-item img { border-radius: 50%; border: 2px solid rgba(165,180,252,0.3); background: rgba(11,20,45,0.6); }
+  .rune-label { font-size: 12px; opacity: 0.8; max-width: 70px; line-height: 1.2; }
+
+  /* Lightbox */
+  #skin-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.88);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    cursor: zoom-out;
+  }
+  #skin-lightbox.open { display: flex; animation: fadeInBg 0.2s ease; }
+  #skin-lightbox img {
+    max-width: min(94vw, 900px);
+    max-height: 80vh;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    object-fit: contain;
+    animation: popIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  #skin-lightbox-label {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  }
+  @keyframes fadeInBg { from { opacity:0; } to { opacity:1; } }
+  @keyframes popIn { from { transform:scale(0.85); opacity:0; } to { transform:scale(1); opacity:1; } }
 
   #status { font-size: 18px; font-weight: 600; padding: 20px; text-align: center; }
   body.light #status { color: #333; }
+
 </style>
 </head>
 <body>
+  <!-- Skin Lightbox Modal -->
+  <div id="skin-lightbox" onclick="closeSkinLightbox()">
+    <img id="skin-lightbox-img" src="" alt="">
+    <div id="skin-lightbox-label"></div>
+  </div>
   <div id="header">
     <div style="display:flex; gap:clamp(8px,1.5vw,16px); align-items:center; flex-wrap:wrap;">
       <a href="index.html">Champion List & Abilities</a>
@@ -188,10 +265,16 @@
   </div>
 
   <div class="wrap">
-    <div id="status">Loading champion…</div>
+    <div id="status" style="width: 100%; max-width: 600px; margin: 40px auto; text-align: center;">
+      <div class="skeleton skeleton-title" style="margin: 0 auto;"></div>
+      <div class="skeleton skeleton-image" style="margin-top: 20px;"></div>
+      <div class="skeleton skeleton-text short" style="margin: 0 auto 10px;"></div>
+      <div class="skeleton skeleton-text short" style="margin: 0 auto;"></div>
+    </div>
     <div id="main" style="display:none;"></div>
   </div>
 
+<script src="champion-extras.js"></script>
 <script>
 const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 const DDRAGON_BASE = "https://ddragon.leagueoflegends.com/cdn";
@@ -242,6 +325,20 @@ function renderChampionPage(ch, version, id) {
 
   const tags = (ch.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("");
 
+  const extrasKey = Object.keys(window.CHAMPION_EXTRAS || {}).find(k => k.toLowerCase() === String(ch.name || "").toLowerCase().replace(/[^a-z0-9]/g,"")) || ch.name;
+  const extras = (window.CHAMPION_EXTRAS && window.CHAMPION_EXTRAS[extrasKey]) || { role: "Flex", tiltRisk: "Balanced", combo: "Situational" };
+  let tiltRiskClass = "";
+  if (extras.tiltRisk.includes("Strong Early")) tiltRiskClass = "tilt-risk-strong";
+  else if (extras.tiltRisk.includes("Weak Early")) tiltRiskClass = "tilt-risk-weak";
+
+  const extrasHtml = `
+    <div class="extras-row" style="margin-top: 14px; margin-bottom: 0;">
+      <div class="extras-badge"><span class="extras-label">Role</span><span class="extras-value">${escapeHtml(extras.role)}</span></div>
+      <div class="extras-badge"><span class="extras-label">Tilt Risk</span><span class="extras-value ${tiltRiskClass}">${escapeHtml(extras.tiltRisk)}</span></div>
+      <div class="extras-badge"><span class="extras-label">Most Used Combo</span><span class="extras-value">${escapeHtml(extras.combo)}</span></div>
+    </div>
+  `;
+
   const stats = ch.stats || {};
   const statKeys = [
     ["hp", "HP"],
@@ -266,19 +363,39 @@ function renderChampionPage(ch, version, id) {
   const infoBars = ["attack", "defense", "magic", "difficulty"].map((key) => {
     const val = info[key] ?? 0;
     const label = key.charAt(0).toUpperCase() + key.slice(1);
-    return `<div class="info-bar"><label>${escapeHtml(label)}</label><div class="bar"><div class="fill" style="width:${barPct(val, 10)}"></div></div></div>`;
+    return `<div class="info-bar"><label>${escapeHtml(label)}</label><div class="bar"><div class="fill" data-width="${barPct(val, 10)}" style="width:0%"></div></div></div>`;
   }).join("");
 
+  const padKey = String(ch.key).padStart(4, '0');
   let abilitiesHtml = "";
   if (ch.passive && ch.passive.name) {
-    abilitiesHtml += `<div class="ability"><h3>Passive — ${escapeHtml(ch.passive.name)}</h3><div class="desc">${escapeHtml(stripTags(ch.passive.description))}</div></div>`;
+    const vidUrl = `https://d28xe8vt774jo5.cloudfront.net/champion-abilities/${padKey}/ability_${padKey}_P1.mp4`;
+    abilitiesHtml += `
+      <div class="ability">
+        <h3>Passive — ${escapeHtml(ch.passive.name)}</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px;">
+          <div class="desc" style="flex:1; min-width:200px;">${escapeHtml(stripTags(ch.passive.description))}</div>
+          <video src="${vidUrl}" style="width: 100%; max-width: 250px; border-radius: 8px; border: 1px solid rgba(165,180,252,0.3);" autoplay loop muted playsinline onerror="this.style.display='none'"></video>
+        </div>
+      </div>`;
   }
   const keys = ["Q", "W", "E", "R"];
   (ch.spells || []).forEach((spell, i) => {
     if (!spell || !spell.name) return;
     const body = stripTags(spell.description || spell.tooltip || "");
     const meta = [spell.cooldownBurn && `Cooldown: ${spell.cooldownBurn}`, spell.costBurn && `Cost: ${spell.costBurn}`].filter(Boolean).join(" · ");
-    abilitiesHtml += `<div class="ability"><h3>${keys[i] || "?"} — ${escapeHtml(spell.name)}</h3>${meta ? `<div class="desc" style="opacity:0.88;font-size:14px;margin-bottom:6px;font-weight:600;">${escapeHtml(meta)}</div>` : ""}<div class="desc">${escapeHtml(body)}</div></div>`;
+    const key = keys[i] || "?";
+    const vidKey = `${key}1`;
+    const vidUrl = `https://d28xe8vt774jo5.cloudfront.net/champion-abilities/${padKey}/ability_${padKey}_${vidKey}.mp4`;
+    abilitiesHtml += `
+      <div class="ability">
+        <h3>${key} — ${escapeHtml(spell.name)}</h3>
+        ${meta ? `<div class="desc" style="opacity:0.88;font-size:14px;margin-bottom:6px;font-weight:600;">${escapeHtml(meta)}</div>` : ""}
+        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px;">
+          <div class="desc" style="flex:1; min-width:200px;">${escapeHtml(body)}</div>
+          <video src="${vidUrl}" style="width: 100%; max-width: 250px; border-radius: 8px; border: 1px solid rgba(165,180,252,0.3);" autoplay loop muted playsinline onerror="this.style.display='none'"></video>
+        </div>
+      </div>`;
   });
 
   const ally = Array.isArray(ch.allytips) && ch.allytips.length
@@ -289,13 +406,50 @@ function renderChampionPage(ch, version, id) {
     ? `<div class="card"><h2>Playing against ${escapeHtml(ch.name)}</h2><ul class="tips">${ch.enemytips.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul></div>`
     : "";
 
-  const skins = Array.isArray(ch.skins)
-    ? ch.skins.filter((s) => s && s.name).map((s) => `<span class="skin-pill">${escapeHtml(s.name === "default" ? "Default" : s.name)}</span>`).join("")
-    : "";
+  // Build interactive skin carousel
+  const skinSlides = Array.isArray(ch.skins)
+    ? ch.skins.filter((s) => s && s.name && !s.name.toLowerCase().includes('chroma') && !/[()[\]]/.test(s.name)).map((s) => {
+        const skinNum = s.num ?? 0;
+        const splashSrc = `${DDRAGON_BASE}/img/champion/splash/${id}_${skinNum}.jpg`;
+        const skinName = s.name === 'default' ? 'Default' : s.name;
+        return `<div class="skin-slide" style="cursor:zoom-in;" onclick="openSkinLightbox('${splashSrc}', '${skinName.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
+          <img src="${splashSrc}" alt="${escapeHtml(skinName)}" loading="lazy" onerror="this.parentElement.style.display='none'">
+          <div class="skin-slide-label">${escapeHtml(skinName)}</div>
+        </div>`;
+      }).join('')
+    : '';
 
-  const skinsBlock = skins
-    ? `<div class="card"><h2>Skins</h2><div class="skins">${skins}</div></div>`
-    : "";
+  const skinsBlock = skinSlides
+    ? `<div class="card"><h2>Skins</h2><div class="skin-carousel">${skinSlides}</div></div>`
+    : '';
+
+  // Build recommended items and runes from STATBASE_SNAPSHOT
+  const champKey = (ch.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const statEntry = (window.STATBASE_SNAPSHOT || {})[champKey] || (window.STATBASE_SNAPSHOT || {})[ch.name] || null;
+  const buildItems = statEntry?.data?.builds?.[0]?.items || [];
+  const runePerks = statEntry?.data?.runes?.[0]?.perks || [];
+
+  const itemsHtml = buildItems.length
+    ? buildItems.map((itemId) => {
+        const itemImgUrl = `${DDRAGON_BASE}/${version}/img/item/${itemId}.png`;
+        return `<div class="build-item" title="Item ${itemId}"><img src="${itemImgUrl}" width="52" height="52" alt="Item ${itemId}" onerror="this.parentElement.style.display='none'"></div>`;
+      }).join('')
+    : '<p style="opacity:0.7">No build data available for this champion.</p>';
+
+  const runesHtml = runePerks.length
+    ? runePerks.map((perk) => {
+        return `<div class="rune-item" title="${escapeHtml(perk.name || '')}"><img src="${escapeHtml(perk.url || '')}" width="44" height="44" alt="${escapeHtml(perk.name || '')}" onerror="this.parentElement.style.display='none'"><span class="rune-label">${escapeHtml(perk.name || '')}</span></div>`;
+      }).join('')
+    : '<p style="opacity:0.7">No rune data available for this champion.</p>';
+
+  const buildsBlock = `
+    <div class="card">
+      <h2>Recommended Build</h2>
+      <h3 style="margin:12px 0 8px; opacity:0.85; font-size:16px;">Items</h3>
+      <div class="build-items-row">${itemsHtml}</div>
+      <h3 style="margin:18px 0 8px; opacity:0.85; font-size:16px;">Runes</h3>
+      <div class="runes-row">${runesHtml}</div>
+    </div>`;
 
   document.title = `${ch.name} — League Companion`;
 
@@ -310,7 +464,8 @@ function renderChampionPage(ch, version, id) {
           <h1>${escapeHtml(ch.name)}</h1>
           <p class="subtitle">${escapeHtml(ch.title || "")}</p>
           <div class="tags">${tags}</div>
-          <p class="meta-row"><strong>Resource:</strong> ${escapeHtml(ch.partype || "—")}</p>
+          ${extrasHtml}
+          <p class="meta-row" style="margin-top: 14px;"><strong>Resource:</strong> ${escapeHtml(ch.partype || "—")}</p>
           <p class="meta-row"><strong>Data Dragon:</strong> ${escapeHtml(version)}</p>
         </div>
       </div>
@@ -318,6 +473,8 @@ function renderChampionPage(ch, version, id) {
       ${ch.lore && String(ch.lore).trim() ? `<div class="lore">${escapeHtml(ch.lore)}</div>` : ""}
       <h2 style="margin-top:20px;">Combat style (1–10)</h2>
       <div class="info-bars">${infoBars}</div>
+      <!-- Trigger animation manually after render -->
+      <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" onload="setTimeout(() => { const bars = this.parentElement.querySelectorAll('.fill'); for(let b of bars) { b.style.width = b.getAttribute('data-width'); } }, 50);" style="display:none;" alt="">
       <h2 style="margin-top:20px;">Base stats (level 1)</h2>
       <div class="stat-grid">${statCells || "<p>No stat data.</p>"}</div>
     </div>
@@ -357,6 +514,19 @@ function renderChampionPage(ch, version, id) {
     statusEl.textContent = "Failed to load champion data. Check your connection and refresh.";
   }
 })();
+
+function openSkinLightbox(src, label) {
+  const lb = document.getElementById('skin-lightbox');
+  document.getElementById('skin-lightbox-img').src = src;
+  document.getElementById('skin-lightbox-label').textContent = label;
+  lb.classList.add('open');
+}
+function closeSkinLightbox() {
+  document.getElementById('skin-lightbox').classList.remove('open');
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSkinLightbox();
+});
 </script>
 <script src="page-transitions.js"></script>
 </body>
