@@ -148,6 +148,168 @@ body.light .bar { background: rgba(200,200,200,0.6); }
   border-bottom: 1px dashed rgba(165,180,252,0.8);
   cursor: help;
 }
+.details-top {
+  display: grid;
+  grid-template-columns: minmax(200px, 232px) minmax(0, 1fr);
+  gap: 20px 28px;
+  align-items: start;
+}
+.champ-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 232px;
+  padding-right: 18px;
+  margin-right: 4px;
+  margin-left: -4px;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(165, 180, 252, 0.28);
+}
+body.light .champ-column {
+  border-right-color: rgba(90, 90, 175, 0.28);
+}
+.champ-portrait {
+  text-align: center;
+  width: 100%;
+}
+.champ-portrait-link {
+  display: inline-block;
+  border-radius: 10px;
+  line-height: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.champ-portrait-link:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.champ-portrait-link:focus {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 3px;
+}
+body.light .champ-portrait-link:focus {
+  outline-color: #5a5aaf;
+}
+.champ-portrait img {
+  width: 140px;
+  height: 140px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+}
+.abilities-heading {
+  margin: 12px 0 8px;
+  font-size: 17px;
+  letter-spacing: 0.45px;
+  color: #a5b4fc;
+  width: 100%;
+  text-align: left;
+  padding-left: 2px;
+}
+body.light .abilities-heading { color: #5a5aaf; }
+.abilities-list-vertical {
+  list-style: none;
+  padding: 0 0 0 2px;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+.abilities-list-vertical li {
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  word-break: break-word;
+  border-radius: 8px;
+  background: rgba(30,40,70,0.55);
+  border: 1px solid rgba(165, 180, 252, 0.15);
+  width: 100%;
+  box-sizing: border-box;
+}
+body.light .abilities-list-vertical li {
+  background: rgba(200,200,220,0.4);
+  border-color: rgba(90, 90, 175, 0.2);
+}
+.side-insights {
+  min-width: 0;
+}
+.side-insights h3 {
+  margin-top: 0;
+}
+.item-row, .matchup-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.item-chip, .matchup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(30,40,70,0.55);
+  font-size: 14px;
+}
+body.light .item-chip, body.light .matchup-chip {
+  background: rgba(160,160,180,0.3);
+}
+.item-chip img, .matchup-chip img {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+a.item-chip {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+a.item-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+  background: rgba(40, 55, 95, 0.8) !important;
+}
+body.light a.item-chip:hover {
+  background: rgba(170, 170, 195, 0.55) !important;
+}
+a.item-chip:focus {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 2px;
+}
+body.light a.item-chip:focus {
+  outline-color: #5a5aaf;
+}
+.matchup-chip-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.matchup-chip-clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  background: rgba(40, 55, 95, 0.75) !important;
+}
+body.light .matchup-chip-clickable:hover {
+  background: rgba(180, 180, 200, 0.55) !important;
+}
+.matchup-chip-clickable:focus {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 2px;
+}
+body.light .matchup-chip-clickable:focus {
+  outline-color: #5a5aaf;
+}
+.insight-block {
+  margin-top: 10px;
+}
+.insight-block p {
+  margin: 4px 0;
+}
 
 #pagination button {
   padding:6px 12px;
@@ -208,6 +370,13 @@ const champsPerPage=20;
 let liveRatesByChampion = {};
 const liveRatesBySlug = {};
 let activeChampionRequestId = 0;
+const championInsightsBySlug = {};
+let itemDataById = null;
+let itemDataPromise = null;
+let liveRatesPromise = null;
+const ratesPageInFlight = new Map();
+const insightsPageInFlight = new Map();
+const prefetchedInsightKeys = new Set();
 
 // Dark mode toggle
 function toggleDarkMode(){
@@ -224,6 +393,16 @@ function stripHtml(html){
   return `${html || ""}`.replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
 }
 
+function escapeHtml(text){
+  return `${text || ""}`.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+/** League of Legends Wiki (Fandom) item article — describes stats, build path, etc. */
+function itemWikiUrl(itemName){
+  const segment = `${itemName || ""}`.trim().replace(/\s+/g, "_");
+  return `https://leagueoflegends.fandom.com/wiki/${encodeURIComponent(segment)}`;
+}
+
 function clampRate(value){
   const num = Number(value);
   if (Number.isNaN(num) || !Number.isFinite(num)) return null;
@@ -234,30 +413,59 @@ function formatRate(value){
   return value === null ? "N/A" : `${value.toFixed(2)}%`;
 }
 
+async function loadItemData(version){
+  if (itemDataById) return itemDataById;
+  if (!itemDataPromise) {
+    itemDataPromise = fetch(`${DDRAGON_BASE_URL}/${version}/data/en_US/item.json`)
+      .then((r) => r.json())
+      .then((payload) => {
+        itemDataById = payload?.data || {};
+        return itemDataById;
+      })
+      .catch((error) => {
+        console.error("Item data fetch failed:", error);
+        itemDataById = {};
+        return itemDataById;
+      })
+      .finally(() => {
+        itemDataPromise = null;
+      });
+  }
+  return itemDataPromise;
+}
+
 async function loadLiveChampionRates(){
   if (Object.keys(liveRatesByChampion).length) return liveRatesByChampion;
-  try{
-    const text = await (await fetch(OPGG_STATS_URL, { cache: "no-store" })).text();
-    const pattern = /\|\s*\d+\s*\|\s*\[!\[Image[^\]]*\]\([^)]+\)\*\*([^*]+)\*\*\]\([^)]+\)\s*\|[^|]*\|[^|]*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|/g;
-    const rates = {};
-    let match;
-    while ((match = pattern.exec(text)) !== null){
-      const name = (match[1] || "").trim();
-      const key = normalizeChampionName(name);
-      if (!key) continue;
-      rates[key] = {
-        win: clampRate(match[2]),
-        pick: clampRate(match[3]),
-        ban: clampRate(match[4])
-      };
-    }
-    liveRatesByChampion = rates;
-    return liveRatesByChampion;
-  }catch(error){
-    console.error("Live rate fetch failed:", error);
-    liveRatesByChampion = {};
-    return liveRatesByChampion;
+  if (!liveRatesPromise) {
+    liveRatesPromise = fetch(OPGG_STATS_URL, { cache: "no-store" })
+      .then((r) => r.text())
+      .then((text) => {
+        const pattern = /\|\s*\d+\s*\|\s*\[!\[Image[^\]]*\]\([^)]+\)\*\*([^*]+)\*\*\]\([^)]+\)\s*\|[^|]*\|[^|]*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|/g;
+        const rates = {};
+        let match;
+        while ((match = pattern.exec(text)) !== null){
+          const name = (match[1] || "").trim();
+          const key = normalizeChampionName(name);
+          if (!key) continue;
+          rates[key] = {
+            win: clampRate(match[2]),
+            pick: clampRate(match[3]),
+            ban: clampRate(match[4])
+          };
+        }
+        liveRatesByChampion = rates;
+        return liveRatesByChampion;
+      })
+      .catch((error) => {
+        console.error("Live rate fetch failed:", error);
+        liveRatesByChampion = {};
+        return liveRatesByChampion;
+      })
+      .finally(() => {
+        liveRatesPromise = null;
+      });
   }
+  return liveRatesPromise;
 }
 
 function candidateOpggSlugs(championId, championName){
@@ -283,28 +491,128 @@ function candidateOpggSlugs(championId, championName){
   return [...new Set(expanded)];
 }
 
+function resolveMatchupChampion(m){
+  if (!m || !champs.length) return null;
+  let found = champs.find((champ) => normalizeChampionName(champ.name) === normalizeChampionName(m.champion));
+  if (found) return found;
+  const slug = `${m.slug || ""}`.toLowerCase();
+  if (slug) {
+    found = champs.find((champ) => normalizeChampionName(champ.id) === slug);
+    if (found) return found;
+    found = champs.find((champ) => candidateOpggSlugs(champ.id, champ.name).includes(slug));
+  }
+  return found || null;
+}
+
+function renderMatchupChip(m){
+  const matchChamp = resolveMatchupChampion(m);
+  const icon = matchChamp ? matchChamp.image : "https://via.placeholder.com/22?text=?";
+  const attrs = matchChamp
+    ? `class="matchup-chip matchup-chip-clickable" role="button" tabindex="0" data-champion-id="${escapeHtml(matchChamp.id)}" title="View ${escapeHtml(matchChamp.name)}"`
+    : `class="matchup-chip"`;
+  return `<span ${attrs}><img src="${icon}" alt="${escapeHtml(m.champion)}"><span>${escapeHtml(m.champion)} (${m.winRate.toFixed(2)}%)</span></span>`;
+}
+
+function parseInsightsFromOpggText(text){
+  const itemRows = [...text.matchAll(/\| !\[Image [^\n]+item\/\d+\.png[^\n]*/gi)].map((m) => m[0]);
+  const itemIds = [];
+  itemRows.forEach((line) => {
+    const ids = [...line.matchAll(/item\/(\d+)\.png/gi)].map((m) => m[1]);
+    ids.forEach((id) => itemIds.push(id));
+  });
+
+  const matchupRows = [...text.matchAll(/\*\s+\[\!\[Image [^\n]*target_champion=[a-z0-9]+[^\n]*/gi)]
+    .map((m) => m[0])
+    .map((line) => {
+      const nameMatch = line.match(/Image \d+:\s([^\]]+)\]/);
+      const rateMatch = line.match(/\*\*([0-9.]+)%\*\*/);
+      const slugMatch = line.match(/target_champion=([a-z0-9]+)/i);
+      return {
+        champion: nameMatch ? nameMatch[1].trim() : "",
+        winRate: rateMatch ? Number(rateMatch[1]) : null,
+        slug: slugMatch ? slugMatch[1] : ""
+      };
+    })
+    .filter((m) => m.champion && m.winRate !== null);
+
+  const sorted = matchupRows.sort((a, b) => a.winRate - b.winRate);
+  const worst = sorted.slice(0, 3);
+  const best = [...sorted].reverse().slice(0, 3);
+  return { itemIds, worst, best };
+}
+
+async function fetchRatesForSlug(slug){
+  if (liveRatesBySlug[slug]) return liveRatesBySlug[slug];
+  let p = ratesPageInFlight.get(slug);
+  if (!p) {
+    const pattern = /_Win rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Pick rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Ban rate_\*\*([0-9.]+)%\*\*/i;
+    p = fetch(`https://r.jina.ai/http://www.op.gg/lol/champions/${slug}/build`, { cache: "no-store" })
+      .then((r) => r.text())
+      .then((text) => {
+        const m = text.match(pattern);
+        if (!m) return null;
+        const rates = {
+          win: clampRate(m[1]),
+          pick: clampRate(m[2]),
+          ban: clampRate(m[3])
+        };
+        liveRatesBySlug[slug] = rates;
+        return rates;
+      })
+      .catch(() => null)
+      .finally(() => ratesPageInFlight.delete(slug));
+    ratesPageInFlight.set(slug, p);
+  }
+  return p;
+}
+
 async function fetchChampionRatesFromPage(championId, championName){
   const slugs = candidateOpggSlugs(championId, championName);
-  const pattern = /_Win rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Pick rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Ban rate_\*\*([0-9.]+)%\*\*/i;
   for (const slug of slugs){
     if (liveRatesBySlug[slug]) return liveRatesBySlug[slug];
-    try{
-      const url = `https://r.jina.ai/http://www.op.gg/lol/champions/${slug}/build`;
-      const text = await (await fetch(url, { cache: "no-store" })).text();
-      const m = text.match(pattern);
-      if (!m) continue;
-      const rates = {
-        win: clampRate(m[1]),
-        pick: clampRate(m[2]),
-        ban: clampRate(m[3])
-      };
-      liveRatesBySlug[slug] = rates;
-      return rates;
-    }catch(_error){
-      // Try the next candidate slug.
-    }
+    const rates = await fetchRatesForSlug(slug);
+    if (rates) return rates;
   }
   return null;
+}
+
+async function fetchInsightsForSlug(slug){
+  if (championInsightsBySlug[slug]) return championInsightsBySlug[slug];
+  let p = insightsPageInFlight.get(slug);
+  if (!p) {
+    p = fetch(`https://r.jina.ai/http://www.op.gg/lol/champions/${slug}/build`, { cache: "no-store" })
+      .then((r) => r.text())
+      .then((text) => {
+        const insights = parseInsightsFromOpggText(text);
+        championInsightsBySlug[slug] = insights;
+        return insights;
+      })
+      .catch(() => ({ itemIds: [], worst: [], best: [] }))
+      .finally(() => insightsPageInFlight.delete(slug));
+    insightsPageInFlight.set(slug, p);
+  }
+  return p;
+}
+
+async function fetchChampionInsightsFromPage(championId, championName){
+  const slugs = candidateOpggSlugs(championId, championName);
+  for (const slug of slugs){
+    const cached = championInsightsBySlug[slug];
+    if (cached && (cached.itemIds?.length || cached.worst?.length)) return cached;
+    const data = await fetchInsightsForSlug(slug);
+    if (data.itemIds?.length || data.worst?.length) return data;
+  }
+  const lastSlug = slugs[slugs.length - 1];
+  if (lastSlug && championInsightsBySlug[lastSlug]) return championInsightsBySlug[lastSlug];
+  return { itemIds: [], worst: [], best: [] };
+}
+
+function prefetchChampionBuildData(c){
+  const key = normalizeChampionName(c.id);
+  if (prefetchedInsightKeys.has(key)) return;
+  prefetchedInsightKeys.add(key);
+  fetchChampionInsightsFromPage(c.id, c.name).catch(() => {});
+  if (c.version) loadItemData(c.version).catch(() => {});
 }
 
 // Load champions, remove Doom Bots and "None", sort alphabetically
@@ -328,6 +636,7 @@ async function loadChamps(){
       }))
       .sort((a,b)=>a.name.localeCompare(b.name));
     loadLiveChampionRates();
+    loadItemData(latestVersion);
     renderChampions();
   }catch(e){
     document.getElementById("list").innerText="Failed to load champions.";
@@ -353,6 +662,7 @@ function renderChampions(){
     div.className = "card";
     div.innerHTML = `<img src="${c.image}" alt="${c.name}" onerror="this.src='https://via.placeholder.com/36?text=?'">${c.name}`;
     div.onclick = ()=>showChampion(c);
+    div.addEventListener("mouseenter", () => prefetchChampionBuildData(c), { passive: true });
     list.appendChild(div);
   });
 
@@ -397,11 +707,31 @@ async function showChampion(c){
 
     d.innerHTML=`
       <h2>${champion.name} (${tierLabel(tierTarget)})</h2>
-      <img src="${c.image}" class="champ" width="140" alt="${champion.name}"><br>
-      <p>Win: <span id="winRateValue">${formatRate(win)}</span></p><div class="bar"><div id="winRateBar" class="fill win" style="width:${win ?? 0}%">${formatRate(win)}</div></div>
-      <p>Pick: <span id="pickRateValue">${formatRate(pick)}</span></p><div class="bar"><div id="pickRateBar" class="fill pick" style="width:${pick ?? 0}%">${formatRate(pick)}</div></div>
-      <p>Ban: <span id="banRateValue">${formatRate(ban)}</span></p><div class="bar"><div id="banRateBar" class="fill ban" style="width:${ban ?? 0}%">${formatRate(ban)}</div></div>
-      <h3>Abilities</h3><ul>${abilities.map(a=>`<li><span class="ability-name" title="${a.tooltip.replace(/"/g,"&quot;")}">${a.key} - ${a.name}</span></li>`).join("")}</ul>`;
+      <div class="details-top">
+        <div class="champ-column">
+          <div class="champ-portrait">
+            <a class="champ-portrait-link" href="champion.html?id=${encodeURIComponent(c.id)}&v=${encodeURIComponent(c.version)}" target="_blank" rel="noopener noreferrer" title="Open full champion profile (new tab)">
+              <img src="${c.image}" alt="${champion.name}">
+            </a>
+          </div>
+          <h3 class="abilities-heading">Abilities</h3>
+          <ul class="abilities-list-vertical">${abilities.map(a=>`<li><span class="ability-name" title="${a.tooltip.replace(/"/g,"&quot;")}">${a.key} — ${a.name}</span></li>`).join("")}</ul>
+        </div>
+        <div class="side-insights">
+          <p>Win: <span id="winRateValue">${formatRate(win)}</span></p><div class="bar"><div id="winRateBar" class="fill win" style="width:${win ?? 0}%">${formatRate(win)}</div></div>
+          <p>Pick: <span id="pickRateValue">${formatRate(pick)}</span></p><div class="bar"><div id="pickRateBar" class="fill pick" style="width:${pick ?? 0}%">${formatRate(pick)}</div></div>
+          <p>Ban: <span id="banRateValue">${formatRate(ban)}</span></p><div class="bar"><div id="banRateBar" class="fill ban" style="width:${ban ?? 0}%">${formatRate(ban)}</div></div>
+          <div class="insight-block">
+            <h3>Recommended Build (2500+ gold)</h3>
+            <div id="recommendedBuild" class="item-row"><p>Loading recommended items...</p></div>
+          </div>
+          <div class="insight-block">
+            <h3>Matchups</h3>
+            <p>Worst</p><div id="worstMatchups" class="matchup-row"><p>Loading...</p></div>
+            <p>Best</p><div id="bestMatchups" class="matchup-row"><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>`;
 
     setTimeout(()=>{
       if (requestId === activeChampionRequestId) contentDiv.classList.add('show');
@@ -439,6 +769,53 @@ async function showChampion(c){
         console.error(error);
       }
     })();
+
+    (async () => {
+      try {
+        const [insights, itemData] = await Promise.all([
+          fetchChampionInsightsFromPage(c.id, champion.name),
+          loadItemData(c.version)
+        ]);
+        if (requestId !== activeChampionRequestId) return;
+        const buildEl = document.getElementById("recommendedBuild");
+        const worstEl = document.getElementById("worstMatchups");
+        const bestEl = document.getElementById("bestMatchups");
+
+        if (buildEl) {
+          const uniqueItems = [...new Set(insights.itemIds || [])]
+            .filter((id) => itemData[id] && itemData[id].gold && itemData[id].gold.total >= 2500)
+            .slice(0, 4);
+          buildEl.innerHTML = uniqueItems.length
+            ? uniqueItems.map((id) => {
+              const item = itemData[id];
+              const icon = `${DDRAGON_BASE_URL}/${c.version}/img/item/${id}.png`;
+              const wikiHref = itemWikiUrl(item.name);
+              const safeTitle = `Open ${item.name} on League of Legends Wiki`.replace(/"/g, "&quot;");
+              return `<a class="item-chip" href="${wikiHref}" target="_blank" rel="noopener noreferrer" title="${safeTitle}"><img src="${icon}" alt="${escapeHtml(item.name)}"><span>${escapeHtml(item.name)} (${item.gold.total}g)</span></a>`;
+            }).join("")
+            : "<p>No 2500+ gold build items found right now.</p>";
+        }
+        if (worstEl) {
+          worstEl.innerHTML = insights.worst.length
+            ? insights.worst.map((m) => renderMatchupChip(m)).join("")
+            : "<p>No matchup data available.</p>";
+        }
+        if (bestEl) {
+          bestEl.innerHTML = insights.best.length
+            ? insights.best.map((m) => renderMatchupChip(m)).join("")
+            : "<p>No matchup data available.</p>";
+        }
+      } catch (error) {
+        if (requestId !== activeChampionRequestId) return;
+        const buildEl = document.getElementById("recommendedBuild");
+        const worstEl = document.getElementById("worstMatchups");
+        const bestEl = document.getElementById("bestMatchups");
+        if (buildEl) buildEl.innerHTML = "<p>No build data available right now.</p>";
+        if (worstEl) worstEl.innerHTML = "<p>No matchup data available.</p>";
+        if (bestEl) bestEl.innerHTML = "<p>No matchup data available.</p>";
+        console.error(error);
+      }
+    })();
   }catch(e){
     if (requestId !== activeChampionRequestId) return;
     d.innerText="Failed to load details.";
@@ -450,6 +827,22 @@ document.getElementById("search").oninput = ()=>{
   currentPage=1;
   renderChampions();
 };
+
+document.getElementById("content").addEventListener("click", (e) => {
+  const chip = e.target.closest(".matchup-chip-clickable");
+  if (!chip || !chip.dataset.championId) return;
+  const target = champs.find((c) => c.id === chip.dataset.championId);
+  if (target) showChampion(target);
+});
+
+document.getElementById("content").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const chip = e.target.closest(".matchup-chip-clickable");
+  if (!chip || !chip.dataset.championId) return;
+  e.preventDefault();
+  const target = champs.find((c) => c.id === chip.dataset.championId);
+  if (target) showChampion(target);
+});
 
 loadChamps();
 </script>

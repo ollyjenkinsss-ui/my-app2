@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Champion — League Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    font-family: "Barlow Condensed", sans-serif;
+    background: linear-gradient(120deg, #0b0f25, #151b40);
+    color: #fff;
+    min-height: 100vh;
+  }
+  body.light {
+    background: linear-gradient(120deg, #f5f5f5, #dcdcdc);
+    color: #111;
+  }
+
+  #header {
+    width: 100%;
+    padding: 12px 30px;
+    background: rgba(20, 30, 60, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-sizing: border-box;
+  }
+  body.light #header { background: rgba(255, 255, 255, 0.85); }
+  #header a {
+    color: #a5b4fc;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  #header a:hover { color: #fff; }
+  body.light #header a { color: #3b3b3b; }
+  body.light #header a:hover { color: #111; }
+
+  .toggle-container { display: flex; align-items: center; margin-right: 30px; }
+  .toggle-wrapper { display: flex; align-items: center; cursor: pointer; }
+  .toggle-switch {
+    width: 50px; height: 26px; background: #1f273d; border-radius: 13px;
+    position: relative; transition: background 0.3s;
+  }
+  body.light .toggle-switch { background: #d1d1d1; }
+  .toggle-knob {
+    width: 24px; height: 24px; background: #fff; border-radius: 50%;
+    position: absolute; top: 1px; left: 1px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.3s;
+  }
+  body.light .toggle-knob { transform: translateX(24px); }
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+    box-sizing: border-box;
+  }
+
+  .splash-wrap {
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+    position: relative;
+    background: #080b18;
+  }
+  .splash-wrap img {
+    width: 100%;
+    display: block;
+    max-height: 420px;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  .card {
+    background: rgba(20, 30, 60, 0.82);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(165, 180, 252, 0.22);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  }
+  body.light .card {
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(90, 90, 175, 0.25);
+    color: #111;
+  }
+
+  h1 { margin: 0 0 6px; font-size: 2.1rem; letter-spacing: 0.5px; }
+  .subtitle { margin: 0 0 12px; opacity: 0.92; font-size: 1.25rem; color: #c7d2fe; }
+  body.light .subtitle { color: #4a4a6a; }
+
+  .tags {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+  }
+  .tag {
+    padding: 4px 12px; border-radius: 999px;
+    background: rgba(165, 180, 252, 0.2);
+    font-weight: 600; font-size: 14px;
+  }
+  body.light .tag { background: rgba(90, 90, 175, 0.2); }
+
+  .meta-row { font-size: 15px; margin-bottom: 8px; opacity: 0.95; }
+  .lore { line-height: 1.55; white-space: pre-wrap; margin-top: 10px; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .stat-cell {
+    background: rgba(11, 20, 45, 0.65);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  body.light .stat-cell { background: rgba(220, 220, 230, 0.6); }
+  .stat-cell strong { color: #a5b4fc; display: block; margin-bottom: 2px; }
+  body.light .stat-cell strong { color: #5a5aaf; }
+
+  .info-bars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+  @media (max-width: 600px) { .info-bars { grid-template-columns: repeat(2, 1fr); } }
+  .info-bar label { font-size: 13px; font-weight: 700; margin-bottom: 4px; display: block; }
+  .info-bar .bar {
+    height: 8px; background: rgba(255,255,255,0.12); border-radius: 6px; overflow: hidden;
+  }
+  body.light .info-bar .bar { background: rgba(0,0,0,0.1); }
+  .info-bar .fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a5b4fc); border-radius: 6px; }
+
+  h2 {
+    margin: 0 0 12px;
+    font-size: 1.35rem;
+    color: #a5b4fc;
+    letter-spacing: 0.4px;
+  }
+  body.light h2 { color: #5a5aaf; }
+
+  .ability {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(165, 180, 252, 0.15);
+  }
+  .ability:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .ability h3 { margin: 0 0 6px; font-size: 1.1rem; }
+  .ability .desc { line-height: 1.5; opacity: 0.95; font-size: 15px; }
+
+  ul.tips { margin: 8px 0 0; padding-left: 20px; }
+  ul.tips li { margin-bottom: 6px; line-height: 1.45; }
+
+  .skins { display: flex; flex-wrap: wrap; gap: 8px; }
+  .skin-pill {
+    padding: 4px 10px; border-radius: 8px;
+    background: rgba(30, 40, 70, 0.6);
+    font-size: 14px;
+  }
+  body.light .skin-pill { background: rgba(200, 200, 220, 0.5); }
+
+  #status { font-size: 18px; font-weight: 600; padding: 20px; text-align: center; }
+  body.light #status { color: #333; }
+</style>
+</head>
+<body>
+  <div id="header">
+    <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+      <a href="index.html">Champion List & Abilities</a>
+      <a href="patch-notes.html">Patch Notes</a>
+      <a href="newest-champion.html">Newest Champion</a>
+    </div>
+    <div class="toggle-container">
+      <div class="toggle-wrapper" onclick="toggleDarkMode()">
+        <div class="toggle-switch">
+          <div class="toggle-knob" id="toggleKnob" aria-label="Toggle Dark Mode"><span id="toggleIcon">🌙</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div id="status">Loading champion…</div>
+    <div id="main" style="display:none;"></div>
+  </div>
+
+<script>
+const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
+const DDRAGON_BASE = "https://ddragon.leagueoflegends.com/cdn";
+
+function toggleDarkMode() {
+  document.body.classList.toggle("light");
+  document.getElementById("toggleIcon").textContent = document.body.classList.contains("light") ? "🌞" : "🌙";
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function stripTags(html) {
+  return String(html ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\{\{[^}]+\}\}/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function barPct(n, max) {
+  const v = Math.max(0, Math.min(max, Number(n) || 0));
+  return `${(v / max) * 100}%`;
+}
+
+async function resolveVersion(requested) {
+  if (requested && /^\d+\.\d+\.\d+/.test(requested)) return requested;
+  const versions = await (await fetch(DDRAGON_VERSIONS_URL)).json();
+  return Array.isArray(versions) && versions[0] ? versions[0] : "15.1.1";
+}
+
+function renderChampionPage(ch, version, id) {
+  const splash = `${DDRAGON_BASE}/img/champion/splash/${id}_0.jpg`;
+  const icon = `${DDRAGON_BASE}/${version}/img/champion/${id}.png`;
+
+  const tags = (ch.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("");
+
+  const stats = ch.stats || {};
+  const statKeys = [
+    ["hp", "HP"],
+    ["hpregen", "HP /5"],
+    ["mp", "Resource"],
+    ["mpregen", "Resource regen /5"],
+    ["movespeed", "Move speed"],
+    ["armor", "Armor"],
+    ["spellblock", "Magic resist"],
+    ["attackdamage", "Attack damage"],
+    ["attackspeed", "Attack speed"],
+    ["attackrange", "Range"],
+    ["crit", "Crit"]
+  ];
+
+  const statCells = statKeys
+    .filter(([k]) => stats[k] !== undefined && stats[k] !== null)
+    .map(([k, label]) => `<div class="stat-cell"><strong>${escapeHtml(label)}</strong>${escapeHtml(String(stats[k]))}</div>`)
+    .join("");
+
+  const info = ch.info || {};
+  const infoBars = ["attack", "defense", "magic", "difficulty"].map((key) => {
+    const val = info[key] ?? 0;
+    const label = key.charAt(0).toUpperCase() + key.slice(1);
+    return `<div class="info-bar"><label>${escapeHtml(label)}</label><div class="bar"><div class="fill" style="width:${barPct(val, 10)}"></div></div></div>`;
+  }).join("");
+
+  let abilitiesHtml = "";
+  if (ch.passive && ch.passive.name) {
+    abilitiesHtml += `<div class="ability"><h3>Passive — ${escapeHtml(ch.passive.name)}</h3><div class="desc">${escapeHtml(stripTags(ch.passive.description))}</div></div>`;
+  }
+  const keys = ["Q", "W", "E", "R"];
+  (ch.spells || []).forEach((spell, i) => {
+    if (!spell || !spell.name) return;
+    const body = stripTags(spell.description || spell.tooltip || "");
+    const meta = [spell.cooldownBurn && `Cooldown: ${spell.cooldownBurn}`, spell.costBurn && `Cost: ${spell.costBurn}`].filter(Boolean).join(" · ");
+    abilitiesHtml += `<div class="ability"><h3>${keys[i] || "?"} — ${escapeHtml(spell.name)}</h3>${meta ? `<div class="desc" style="opacity:0.88;font-size:14px;margin-bottom:6px;font-weight:600;">${escapeHtml(meta)}</div>` : ""}<div class="desc">${escapeHtml(body)}</div></div>`;
+  });
+
+  const ally = Array.isArray(ch.allytips) && ch.allytips.length
+    ? `<div class="card"><h2>Playing as ${escapeHtml(ch.name)}</h2><ul class="tips">${ch.allytips.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul></div>`
+    : "";
+
+  const enemy = Array.isArray(ch.enemytips) && ch.enemytips.length
+    ? `<div class="card"><h2>Playing against ${escapeHtml(ch.name)}</h2><ul class="tips">${ch.enemytips.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul></div>`
+    : "";
+
+  const skins = Array.isArray(ch.skins)
+    ? ch.skins.filter((s) => s && s.name).map((s) => `<span class="skin-pill">${escapeHtml(s.name === "default" ? "Default" : s.name)}</span>`).join("")
+    : "";
+
+  const skinsBlock = skins
+    ? `<div class="card"><h2>Skins</h2><div class="skins">${skins}</div></div>`
+    : "";
+
+  document.title = `${ch.name} — League Companion`;
+
+  return `
+    <div class="splash-wrap">
+      <img src="${splash}" alt="${escapeHtml(ch.name)} splash" onerror="this.style.display='none'">
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+        <img src="${icon}" width="96" height="96" alt="" style="border-radius:12px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/96?text=?'">
+        <div style="flex:1;min-width:200px;">
+          <h1>${escapeHtml(ch.name)}</h1>
+          <p class="subtitle">${escapeHtml(ch.title || "")}</p>
+          <div class="tags">${tags}</div>
+          <p class="meta-row"><strong>Resource:</strong> ${escapeHtml(ch.partype || "—")}</p>
+          <p class="meta-row"><strong>Data Dragon:</strong> ${escapeHtml(version)}</p>
+        </div>
+      </div>
+      ${ch.blurb && String(ch.blurb).trim() ? `<p class="lore" style="margin-top:14px;font-style:italic;opacity:0.9;">${escapeHtml(ch.blurb)}</p>` : ""}
+      ${ch.lore && String(ch.lore).trim() ? `<div class="lore">${escapeHtml(ch.lore)}</div>` : ""}
+      <h2 style="margin-top:20px;">Combat style (1–10)</h2>
+      <div class="info-bars">${infoBars}</div>
+      <h2 style="margin-top:20px;">Base stats (level 1)</h2>
+      <div class="stat-grid">${statCells || "<p>No stat data.</p>"}</div>
+    </div>
+    <div class="card"><h2>Abilities</h2>${abilitiesHtml || "<p>No ability data.</p>"}</div>
+    ${ally}
+    ${enemy}
+    ${skinsBlock}
+  `;
+}
+
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  const statusEl = document.getElementById("status");
+  const mainEl = document.getElementById("main");
+
+  if (!id) {
+    statusEl.textContent = "Missing champion id. Open this page from the champion list (click the portrait).";
+    return;
+  }
+
+  try {
+    const version = await resolveVersion(params.get("v"));
+    const url = `${DDRAGON_BASE}/${version}/data/en_US/champion/${id}.json`;
+    const payload = await (await fetch(url)).json();
+    const ch = payload?.data?.[id];
+    if (!ch) {
+      statusEl.textContent = `Could not load champion "${escapeHtml(id)}". Check the id and try again.`;
+      return;
+    }
+    statusEl.style.display = "none";
+    mainEl.style.display = "block";
+    mainEl.innerHTML = renderChampionPage(ch, version, id);
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "Failed to load champion data. Check your connection and refresh.";
+  }
+})();
+</script>
+</body>
+</html>
