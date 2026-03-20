@@ -21,7 +21,8 @@
 
   #header {
     width: 100%;
-    padding: 12px 30px;
+    box-sizing: border-box;
+    padding: 8px clamp(10px, 2vw, 20px);
     background: rgba(20, 30, 60, 0.85);
     backdrop-filter: blur(10px);
     display: flex;
@@ -30,7 +31,6 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    box-sizing: border-box;
   }
   body.light #header { background: rgba(255, 255, 255, 0.85); }
   #header a {
@@ -38,11 +38,13 @@
     text-decoration: none;
     font-weight: 600;
   }
+  #header a.active { color: #fff; }
+  body.light #header a.active { color: #111; }
   #header a:hover { color: #fff; }
   body.light #header a { color: #3b3b3b; }
   body.light #header a:hover { color: #111; }
 
-  .toggle-container { display: flex; align-items: center; margin-right: 30px; }
+  .toggle-container { display: flex; align-items: center; margin-right: clamp(8px, 2vw, 20px); }
   .toggle-wrapper { display: flex; align-items: center; cursor: pointer; }
   .toggle-switch {
     width: 50px; height: 26px; background: #1f273d; border-radius: 13px;
@@ -58,9 +60,10 @@
   body.light .toggle-knob { transform: translateX(24px); }
 
   .wrap {
-    max-width: 920px;
+    width: 100%;
+    max-width: min(1680px, 96vw);
     margin: 0 auto;
-    padding: 24px 20px 48px;
+    padding: 16px clamp(12px, 2.5vw, 28px) 40px;
     box-sizing: border-box;
   }
 
@@ -75,7 +78,7 @@
   .splash-wrap img {
     width: 100%;
     display: block;
-    max-height: 420px;
+    max-height: min(520px, 55vh);
     object-fit: cover;
     object-position: top center;
   }
@@ -113,7 +116,7 @@
 
   .stat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
     gap: 10px;
     margin-top: 12px;
   }
@@ -170,7 +173,7 @@
 </head>
 <body>
   <div id="header">
-    <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+    <div style="display:flex; gap:clamp(8px,1.5vw,16px); align-items:center; flex-wrap:wrap;">
       <a href="index.html">Champion List & Abilities</a>
       <a href="patch-notes.html">Patch Notes</a>
       <a href="newest-champion.html">Newest Champion</a>
@@ -193,9 +196,20 @@
 const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 const DDRAGON_BASE = "https://ddragon.leagueoflegends.com/cdn";
 
+function applyStoredTheme() {
+  const stored = localStorage.getItem('theme');
+  const isLight = stored === 'light';
+  document.body.classList.toggle('light', isLight);
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = isLight ? '🌞' : '🌙';
+}
+
 function toggleDarkMode() {
-  document.body.classList.toggle("light");
-  document.getElementById("toggleIcon").textContent = document.body.classList.contains("light") ? "🌞" : "🌙";
+  const nextIsLight = !document.body.classList.contains('light');
+  document.body.classList.toggle('light', nextIsLight);
+  localStorage.setItem('theme', nextIsLight ? 'light' : 'dark');
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = nextIsLight ? '🌞' : '🌙';
 }
 
 function escapeHtml(s) {
@@ -315,6 +329,7 @@ function renderChampionPage(ch, version, id) {
 }
 
 (async function init() {
+  applyStoredTheme();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
   const statusEl = document.getElementById("status");

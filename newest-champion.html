@@ -24,7 +24,8 @@
 
   #header {
     width: 100%;
-    padding: 12px 30px;
+    box-sizing: border-box;
+    padding: 8px clamp(10px, 2vw, 20px);
     background: rgba(20, 30, 60, 0.85);
     backdrop-filter: blur(10px);
     display: flex;
@@ -40,6 +41,13 @@
     color: #a5b4fc;
     text-decoration: none;
     font-weight: 600;
+  }
+
+  #header a.active {
+    color: #fff;
+  }
+  body.light #header a.active {
+    color: #111;
   }
 
   #header a:hover {
@@ -58,7 +66,7 @@
   .toggle-container {
     display: flex;
     align-items: center;
-    margin-right: 30px;
+    margin-right: clamp(8px, 2vw, 20px);
   }
   .toggle-wrapper {
     display: flex;
@@ -94,9 +102,10 @@
   }
 
   .container {
-    max-width: 1000px;
-    margin: 24px auto 40px;
-    padding: 0 20px;
+    width: 100%;
+    max-width: min(1500px, 96vw);
+    margin: 12px auto 28px;
+    padding: 0 clamp(10px, 2vw, 28px);
     box-sizing: border-box;
   }
 
@@ -162,7 +171,7 @@
     padding: 0;
     margin: 12px 0 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 10px;
   }
 
@@ -195,10 +204,10 @@
 </head>
 <body>
   <div id="header">
-    <div style="display:flex; gap:18px; align-items:center;">
+    <div style="display:flex; gap:clamp(8px,1.5vw,16px); align-items:center; flex-wrap:wrap;">
       <a href="index.html">Champion List & Abilities</a>
       <a href="patch-notes.html">Patch Notes</a>
-      <a href="newest-champion.html">Newest Champion</a>
+      <a href="newest-champion.html" class="active" aria-current="page">Newest Champion</a>
     </div>
     <div class="toggle-container">
       <div class="toggle-wrapper" onclick="toggleDarkMode()">
@@ -259,10 +268,20 @@ function buildSpotlightSearchUrl(championName) {
   return `https://www.youtube.com/results?search_query=${query}&sp=CAI%253D`;
 }
 
+function applyStoredTheme() {
+  const stored = localStorage.getItem('theme');
+  const isLight = stored === 'light';
+  document.body.classList.toggle('light', isLight);
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = isLight ? '🌞' : '🌙';
+}
+
 function toggleDarkMode() {
-  document.body.classList.toggle("light");
-  const icon = document.getElementById("toggleIcon");
-  icon.textContent = document.body.classList.contains("light") ? "🌞" : "🌙";
+  const nextIsLight = !document.body.classList.contains('light');
+  document.body.classList.toggle('light', nextIsLight);
+  localStorage.setItem('theme', nextIsLight ? 'light' : 'dark');
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = nextIsLight ? '🌞' : '🌙';
 }
 
 async function loadNewestChampion() {
@@ -339,6 +358,7 @@ async function loadNewestChampion() {
   }
 }
 
+applyStoredTheme();
 loadNewestChampion();
 </script>
 <script src="page-transitions.js"></script>

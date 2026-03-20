@@ -22,13 +22,13 @@ body.light {
 #header {
   width: 100%;
   box-sizing: border-box;
-  padding: 10px 30px;
+  padding: 8px clamp(10px, 2vw, 20px);
   background: rgba(20, 30, 60, 0.85);
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   z-index: 10;
@@ -44,7 +44,10 @@ body.light #header a { color: #3b3b3b; }
 #header a:hover { color: #fff; }
 body.light #header a:hover { color: #111; }
 
-.toggle-container { display: flex; align-items: center; margin-right: 30px; }
+#header a.active { color: #fff; }
+body.light #header a.active { color: #111; }
+
+.toggle-container { display: flex; align-items: center; margin-right: clamp(8px, 2vw, 20px); }
 .toggle-wrapper { display: flex; align-items: center; cursor: pointer; }
 .toggle-switch {
   width: 50px;
@@ -71,9 +74,11 @@ body.light .toggle-switch { background: #d1d1d1; }
 body.light .toggle-knob { transform: translateX(24px); }
 
 .page {
-  max-width: 960px;
+  width: 100%;
+  max-width: min(1500px, 96vw);
   margin: 0 auto;
-  padding: 88px 20px 30px 20px;
+  box-sizing: border-box;
+  padding: 12px clamp(10px, 2vw, 24px) 24px;
 }
 
 .hero {
@@ -154,7 +159,7 @@ body.light .impact {
 }
 .impact-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 .impact-item {
@@ -171,9 +176,9 @@ body.light .impact-item {
 </head>
 <body>
 <div id="header">
-  <div style="display:flex; gap:18px; align-items:center;">
+  <div style="display:flex; gap:clamp(8px,1.5vw,16px); align-items:center; flex-wrap:wrap;">
     <a href="index.html">Champion List & Abilities</a>
-    <a>Patch Notes</a>
+    <a href="patch-notes.html" class="active" aria-current="page">Patch Notes</a>
     <a href="newest-champion.html">Newest Champion</a>
   </div>
   <div class="toggle-container">
@@ -202,14 +207,24 @@ body.light .impact-item {
 <script>
 const DDRAGON_VERSIONS_URL = 'https://ddragon.leagueoflegends.com/api/versions.json';
 const DDRAGON_BASE_URL = 'https://ddragon.leagueoflegends.com/cdn';
-const OPGG_STATS_URL = 'https://r.jina.ai/http://www.op.gg/champions';
+const UGG_STATS_URL = 'https://r.jina.ai/https://u.gg/lol/tier-list';
 let liveRatesByChampion = {};
 const liveRatesBySlug = {};
 
-function toggleDarkMode() {
-  document.body.classList.toggle('light');
+function applyStoredTheme() {
+  const stored = localStorage.getItem('theme');
+  const isLight = stored === 'light';
+  document.body.classList.toggle('light', isLight);
   const icon = document.getElementById('toggleIcon');
-  icon.textContent = document.body.classList.contains('light') ? '🌞' : '🌙';
+  if (icon) icon.textContent = isLight ? '🌞' : '🌙';
+}
+
+function toggleDarkMode() {
+  const nextIsLight = !document.body.classList.contains('light');
+  document.body.classList.toggle('light', nextIsLight);
+  localStorage.setItem('theme', nextIsLight ? 'light' : 'dark');
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = nextIsLight ? '🌞' : '🌙';
 }
 
 function safeText(value, fallback) {
@@ -233,17 +248,18 @@ function formatRate(value) {
 async function loadLiveChampionRates() {
   if (Object.keys(liveRatesByChampion).length) return liveRatesByChampion;
   try {
-    const text = await (await fetch(OPGG_STATS_URL, { cache: 'no-store' })).text();
-    const pattern = /\|\s*\d+\s*\|\s*\[!\[Image[^\]]*\]\([^)]+\)\*\*([^*]+)\*\*\]\([^)]+\)\s*\|[^|]*\|[^|]*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|/g;
+    const text = await (await fetch(UGG_STATS_URL, { cache: 'no-store' })).text();
+    const pattern = /\[([^\]]+)\]\([^)]*\/lol\/champions\/([a-z-]+)\/build[^)]*\)[^|]*\|[^|]*\|[^|]*([0-9.]+)%[^|]*\|[^|]*([0-9.]+)%[^|]*\|[^|]*([0-9.]+)%/gi;
     const rates = {};
     let match;
     while ((match = pattern.exec(text)) !== null) {
-      const key = normalizeChampionName(match[1]);
+      const name = (match[1] || '').trim();
+      const key = normalizeChampionName(name);
       if (!key) continue;
       rates[key] = {
-        win: clampRate(match[2]),
-        pick: clampRate(match[3]),
-        ban: clampRate(match[4])
+        win: clampRate(match[3]),
+        pick: clampRate(match[4]),
+        ban: clampRate(match[5])
       };
     }
     liveRatesByChampion = rates;
@@ -254,12 +270,13 @@ async function loadLiveChampionRates() {
   return liveRatesByChampion;
 }
 
-function candidateOpggSlugs(championId, championName) {
-  const normalize = value => `${value || ''}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+function candidateUggSlugs(championId, championName) {
+  const normalize = value => `${value || ''}`.toLowerCase().replace(/[^a-z]/g, '');
   const base = [normalize(championId), normalize(championName)].filter(Boolean);
   const aliases = {
     monkeyking: 'wukong',
-    nunuandwillump: 'nunu',
+    nunuwillump: 'nunu',
+    nunu: 'nunu',
     chogath: 'chogath',
     kogmaw: 'kogmaw',
     reksai: 'reksai',
@@ -276,12 +293,12 @@ function candidateOpggSlugs(championId, championName) {
 }
 
 async function fetchChampionRatesFromPage(championId, championName) {
-  const slugs = candidateOpggSlugs(championId, championName);
-  const pattern = /_Win rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Pick rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Ban rate_\*\*([0-9.]+)%\*\*/i;
+  const slugs = candidateUggSlugs(championId, championName);
+  const pattern = /Win Rate[^0-9]*([0-9.]+)%[^P]*Pick Rate[^0-9]*([0-9.]+)%[^B]*Ban Rate[^0-9]*([0-9.]+)%/i;
   for (const slug of slugs) {
     if (liveRatesBySlug[slug]) return liveRatesBySlug[slug];
     try {
-      const url = `https://r.jina.ai/http://www.op.gg/lol/champions/${slug}/build`;
+      const url = `https://r.jina.ai/https://u.gg/lol/champions/${slug}/build`;
       const text = await (await fetch(url, { cache: 'no-store' })).text();
       const m = text.match(pattern);
       if (!m) continue;
@@ -507,6 +524,7 @@ async function loadPatchNotes() {
   }
 }
 
+applyStoredTheme();
 loadLatestPatchVersion();
 loadPatchNotes();
 </script>

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Olly's League Companion ;)</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -9,6 +10,7 @@ body {
   margin:0;
   font-family:'Barlow Condensed', sans-serif;
   display:flex;
+  flex-direction:column;
   height:100vh;
   background: linear-gradient(120deg,#0b0f25,#151b40);
   color:#fff;
@@ -22,16 +24,18 @@ body.light {
 
 #header {
   width:100%;
-  padding:10px 30px;
+  box-sizing:border-box;
+  padding:8px clamp(10px, 2vw, 20px);
   background: rgba(20,30,60,0.85);
   backdrop-filter: blur(10px);
   display:flex;
   align-items:center;
   justify-content:space-between;
-  position:fixed;
+  position:sticky;
   top:0;
   left:0;
   z-index:10;
+  flex-shrink:0;
 }
 body.light #header { background: rgba(255,255,255,0.85); }
 
@@ -44,9 +48,11 @@ body.light #header { background: rgba(255,255,255,0.85); }
 body.light #header a { color:#3b3b3b; }
 #header a:hover { color:#fff; }
 body.light #header a:hover { color:#111; }
+#header a.active { color:#fff; }
+body.light #header a.active { color:#111; }
 
 /* Toggle Switch */
-.toggle-container { display:flex; align-items:center; margin-right:30px; }
+.toggle-container { display:flex; align-items:center; margin-right:clamp(8px, 2vw, 20px); }
 .toggle-wrapper { display:flex; align-items:center; cursor:pointer; }
 .toggle-switch {
   width:50px;
@@ -74,11 +80,19 @@ body.light .toggle-switch { background:#d1d1d1; }
 body.light .toggle-knob { transform: translateX(24px); }
 .icon { pointer-events:none; }
 
-.page { flex:1; padding:80px 30px 30px 30px; overflow-y:auto; display:flex; }
+.page {
+  flex:1;
+  padding:12px clamp(8px, 1.25vw, 14px) 12px clamp(8px, 1.25vw, 14px);
+  overflow-y:auto;
+  display:flex;
+  box-sizing:border-box;
+  min-width:0;
+}
 
 #sidebar {
-  width:360px;
-  padding:20px;
+  width:clamp(252px, 24vw, 300px);
+  flex-shrink:0;
+  padding:12px 10px;
   background: rgba(20,30,60,0.8);
   backdrop-filter: blur(10px);
   display:flex;
@@ -118,7 +132,8 @@ body.light .card { background: linear-gradient(145deg,#e5e5e5,#d1d1d1); color:#1
 
 #content {
   flex:1;
-  padding-left:20px;
+  min-width:0;
+  padding-left:clamp(8px, 1.2vw, 14px);
   opacity:0;
   transform: translateY(10px);
   transition: opacity 0.4s ease, transform 0.4s ease;
@@ -150,8 +165,8 @@ body.light .bar { background: rgba(200,200,200,0.6); }
 }
 .details-top {
   display: grid;
-  grid-template-columns: minmax(200px, 232px) minmax(0, 1fr);
-  gap: 20px 28px;
+  grid-template-columns: minmax(180px, min(260px, 26vw)) minmax(0, 1fr);
+  gap: 14px clamp(12px, 2vw, 22px);
   align-items: start;
 }
 @media (max-width: 720px) {
@@ -167,10 +182,10 @@ body.light .bar { background: rgba(200,200,200,0.6); }
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
-  max-width: 232px;
-  padding-right: 18px;
-  margin-right: 4px;
-  margin-left: -4px;
+  max-width: min(280px, 100%);
+  padding-right: 12px;
+  margin-right: 0;
+  margin-left: 0;
   box-sizing: border-box;
   border-right: 1px solid rgba(165, 180, 252, 0.28);
 }
@@ -199,8 +214,9 @@ body.light .champ-portrait-link:focus {
   outline-color: #5a5aaf;
 }
 .champ-portrait img {
-  width: 140px;
-  height: 140px;
+  width: min(150px, 100%);
+  aspect-ratio: 1;
+  height: auto;
   border-radius: 10px;
   object-fit: cover;
   display: block;
@@ -411,15 +427,15 @@ body.light #pagination button { background:#a5a5a5; color:#111; }
 <body>
 
 <div id="header">
-  <div style="display:flex; gap:18px; align-items:center;">
-    <a>Champion List & Abilities</a>
+  <div style="display:flex; gap:clamp(8px,1.5vw,16px); align-items:center; flex-wrap:wrap;">
+    <a href="index.html" class="active" aria-current="page">Champion List & Abilities</a>
     <a href="patch-notes.html">Patch Notes</a>
     <a href="newest-champion.html">Newest Champion</a>
   </div>
   <div class="toggle-container">
     <div class="toggle-wrapper" onclick="toggleDarkMode()">
       <div class="toggle-switch">
-        <div class="toggle-knob" id="toggleKnob" aria-label="Toggle Dark Mode"><span class="icon">🌙</span></div>
+        <div class="toggle-knob" id="toggleKnob" aria-label="Toggle Dark Mode"><span class="icon" id="toggleIcon">🌙</span></div>
       </div>
     </div>
   </div>
@@ -445,7 +461,7 @@ body.light #pagination button { background:#a5a5a5; color:#111; }
 const tierLabel = w => w>=52?"S":w>=50?"A":w>=48?"B":"C";
 const DDRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 const DDRAGON_BASE_URL = "https://ddragon.leagueoflegends.com/cdn";
-const OPGG_STATS_URL = "https://r.jina.ai/http://www.op.gg/champions";
+const API_BASE = "/api/statbase";
 
 let champs=[], currentPage=1, filteredChamps=[];
 const champsPerPage=20;
@@ -460,11 +476,22 @@ const ratesPageInFlight = new Map();
 const insightsPageInFlight = new Map();
 const prefetchedInsightKeys = new Set();
 
-// Dark mode toggle
+applyStoredTheme();
+
+function applyStoredTheme(){
+  const stored = localStorage.getItem('theme');
+  const isLight = stored === 'light';
+  document.body.classList.toggle('light', isLight);
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = isLight ? '🌞' : '🌙';
+}
+
 function toggleDarkMode(){
-  const knob = document.getElementById('toggleKnob').querySelector('.icon');
-  document.body.classList.toggle('light');
-  knob.textContent = document.body.classList.contains('light') ? '🌞' : '🌙';
+  const nextIsLight = !document.body.classList.contains('light');
+  document.body.classList.toggle('light', nextIsLight);
+  localStorage.setItem('theme', nextIsLight ? 'light' : 'dark');
+  const icon = document.getElementById('toggleIcon');
+  if (icon) icon.textContent = nextIsLight ? '🌞' : '🌙';
 }
 
 function normalizeChampionName(name){
@@ -517,47 +544,21 @@ async function loadItemData(version){
 }
 
 async function loadLiveChampionRates(){
-  if (Object.keys(liveRatesByChampion).length) return liveRatesByChampion;
-  if (!liveRatesPromise) {
-    liveRatesPromise = fetch(OPGG_STATS_URL, { cache: "no-store" })
-      .then((r) => r.text())
-      .then((text) => {
-        const pattern = /\|\s*\d+\s*\|\s*\[!\[Image[^\]]*\]\([^)]+\)\*\*([^*]+)\*\*\]\([^)]+\)\s*\|[^|]*\|[^|]*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|\s*([0-9.]+)%\s*\|/g;
-        const rates = {};
-        let match;
-        while ((match = pattern.exec(text)) !== null){
-          const name = (match[1] || "").trim();
-          const key = normalizeChampionName(name);
-          if (!key) continue;
-          rates[key] = {
-            win: clampRate(match[2]),
-            pick: clampRate(match[3]),
-            ban: clampRate(match[4])
-          };
-        }
-        liveRatesByChampion = rates;
-        return liveRatesByChampion;
-      })
-      .catch((error) => {
-        console.error("Live rate fetch failed:", error);
-        liveRatesByChampion = {};
-        return liveRatesByChampion;
-      })
-      .finally(() => {
-        liveRatesPromise = null;
-      });
-  }
-  return liveRatesPromise;
+  // Skip loading tier list for now - we'll fetch per-champion
+  liveRatesByChampion = {};
+  return liveRatesByChampion;
 }
 
-function candidateOpggSlugs(championId, championName){
+function candidateUggSlugs(championId, championName){
+  const normalize = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
   const base = [
-    normalizeChampionName(championId),
-    normalizeChampionName(championName)
+    normalize(championId),
+    normalize(championName)
   ].filter(Boolean);
   const aliases = {
     monkeyking: "wukong",
-    nunuandwillump: "nunu",
+    nunuwillump: "nunu",
+    nunu: "nunu",
     chogath: "chogath",
     kogmaw: "kogmaw",
     reksai: "reksai",
@@ -581,7 +582,7 @@ function resolveMatchupChampion(m){
   if (slug) {
     found = champs.find((champ) => normalizeChampionName(champ.id) === slug);
     if (found) return found;
-    found = champs.find((champ) => candidateOpggSlugs(champ.id, champ.name).includes(slug));
+    found = champs.find((champ) => candidateUggSlugs(champ.id, champ.name).includes(slug));
   }
   return found || null;
 }
@@ -603,8 +604,8 @@ function isBootItem(item){
   return /\bboots?\b/.test(n);
 }
 
-/** OP.GG / jina mirror: markdown images for perkStyle / perk / perkShard in the runes section. */
-function parseRunesFromOpggText(text){
+/** U.GG / jina mirror: markdown images for perkStyle / perk / perkShard in the runes section. */
+function parseRunesFromUggText(text){
   const empty = { trees: [], keystone: null, flexPerks: [], shards: [] };
   const start = text.search(/runes\]\(/i);
   if (start === -1) return empty;
@@ -760,54 +761,97 @@ function renderItemChips(ids, itemData, version){
     .join("");
 }
 
-function parseInsightsFromOpggText(text){
-  const itemRows = [...text.matchAll(/\| !\[Image [^\n]+item\/\d+\.png[^\n]*/gi)].map((m) => m[0]);
-  const itemIds = [];
-  itemRows.forEach((line) => {
-    const ids = [...line.matchAll(/item\/(\d+)\.png/gi)].map((m) => m[1]);
-    ids.forEach((id) => itemIds.push(id));
-  });
-
-  const matchupRows = [...text.matchAll(/\*\s+\[\!\[Image [^\n]*target_champion=[a-z0-9]+[^\n]*/gi)]
-    .map((m) => m[0])
-    .map((line) => {
-      const nameMatch = line.match(/Image \d+:\s([^\]]+)\]/);
-      const rateMatch = line.match(/\*\*([0-9.]+)%\*\*/);
-      const slugMatch = line.match(/target_champion=([a-z0-9]+)/i);
-      return {
-        champion: nameMatch ? nameMatch[1].trim() : "",
-        winRate: rateMatch ? Number(rateMatch[1]) : null,
-        slug: slugMatch ? slugMatch[1] : ""
-      };
-    })
-    .filter((m) => m.champion && m.winRate !== null);
-
-  const sorted = matchupRows.sort((a, b) => a.winRate - b.winRate);
-  const worst = sorted.slice(0, 3);
-  const best = [...sorted].reverse().slice(0, 3);
-  const runes = parseRunesFromOpggText(text);
-  return { itemIds, worst, best, runes };
+function parseInsightsFromOpgg(data){
+  const empty = {
+    itemIds: [],
+    worst: [],
+    best: [],
+    runes: { trees: [], keystone: null, flexPerks: [], shards: [] }
+  };
+  
+  try {
+    if (!data || !data.data) return empty;
+    
+    const champData = data.data;
+    const itemIds = [];
+    
+    // Extract items from builds
+    if (champData.builds && champData.builds.length > 0) {
+      const build = champData.builds[0];
+      if (build.items) {
+        build.items.forEach(itemId => {
+          if (itemId && itemIds.length < 15) {
+            itemIds.push(String(itemId));
+          }
+        });
+      }
+    }
+    
+    // Extract matchups
+    const matchupRows = [];
+    if (champData.matchups) {
+      champData.matchups.forEach(m => {
+        if (m.champion_name && m.win_rate !== undefined) {
+          matchupRows.push({
+            champion: m.champion_name,
+            winRate: Number(m.win_rate),
+            slug: normalizeChampionName(m.champion_name)
+          });
+        }
+      });
+    }
+    
+    const sorted = matchupRows.sort((a, b) => a.winRate - b.winRate);
+    const worst = sorted.slice(0, 3);
+    const best = [...sorted].reverse().slice(0, 3);
+    
+    // Extract runes
+    const runes = { trees: [], keystone: null, flexPerks: [], shards: [] };
+    if (champData.runes && champData.runes.length > 0) {
+      const runeSet = champData.runes[0];
+      if (runeSet.perks) {
+        const perks = runeSet.perks.map(p => ({
+          id: String(p.id),
+          name: p.name || '',
+          url: p.url || `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${p.id}.png`,
+          pick: p.pick_rate || 0
+        }));
+        
+        if (perks.length > 0) {
+          runes.keystone = perks[0];
+          runes.flexPerks = perks.slice(1, 7);
+        }
+      }
+    }
+    
+    return { itemIds, worst, best, runes };
+  } catch (e) {
+    console.warn("Failed to parse OP.GG data:", e);
+    return empty;
+  }
 }
 
 async function fetchRatesForSlug(slug){
   if (liveRatesBySlug[slug]) return liveRatesBySlug[slug];
   let p = ratesPageInFlight.get(slug);
   if (!p) {
-    const pattern = /_Win rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Pick rate_\*\*([0-9.]+)%\*\*[\s\S]*?_Ban rate_\*\*([0-9.]+)%\*\*/i;
-    p = fetch(`https://r.jina.ai/http://www.op.gg/lol/champions/${slug}/build`, { cache: "no-store" })
-      .then((r) => r.text())
-      .then((text) => {
-        const m = text.match(pattern);
-        if (!m) return null;
+    p = fetch(`${API_BASE}/${slug}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.data) return null;
+        const stats = data.data.stats || data.data;
         const rates = {
-          win: clampRate(m[1]),
-          pick: clampRate(m[2]),
-          ban: clampRate(m[3])
+          win: clampRate(stats.win_rate || stats.winRate),
+          pick: clampRate(stats.pick_rate || stats.pickRate),
+          ban: clampRate(stats.ban_rate || stats.banRate)
         };
         liveRatesBySlug[slug] = rates;
         return rates;
       })
-      .catch(() => null)
+      .catch((err) => {
+        console.warn(`Failed to fetch rates for ${slug}:`, err);
+        return null;
+      })
       .finally(() => ratesPageInFlight.delete(slug));
     ratesPageInFlight.set(slug, p);
   }
@@ -815,7 +859,7 @@ async function fetchRatesForSlug(slug){
 }
 
 async function fetchChampionRatesFromPage(championId, championName){
-  const slugs = candidateOpggSlugs(championId, championName);
+  const slugs = candidateUggSlugs(championId, championName);
   for (const slug of slugs){
     if (liveRatesBySlug[slug]) return liveRatesBySlug[slug];
     const rates = await fetchRatesForSlug(slug);
@@ -828,19 +872,22 @@ async function fetchInsightsForSlug(slug){
   if (championInsightsBySlug[slug]) return championInsightsBySlug[slug];
   let p = insightsPageInFlight.get(slug);
   if (!p) {
-    p = fetch(`https://r.jina.ai/http://www.op.gg/lol/champions/${slug}/build`, { cache: "no-store" })
-      .then((r) => r.text())
-      .then((text) => {
-        const insights = parseInsightsFromOpggText(text);
+    p = fetch(`${API_BASE}/${slug}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        const insights = parseInsightsFromOpgg(data);
         championInsightsBySlug[slug] = insights;
         return insights;
       })
-      .catch(() => ({
-        itemIds: [],
-        worst: [],
-        best: [],
-        runes: { trees: [], keystone: null, flexPerks: [], shards: [] }
-      }))
+      .catch((err) => {
+        console.warn(`Failed to fetch insights for ${slug}:`, err);
+        return {
+          itemIds: [],
+          worst: [],
+          best: [],
+          runes: { trees: [], keystone: null, flexPerks: [], shards: [] }
+        };
+      })
       .finally(() => insightsPageInFlight.delete(slug));
     insightsPageInFlight.set(slug, p);
   }
@@ -848,7 +895,7 @@ async function fetchInsightsForSlug(slug){
 }
 
 async function fetchChampionInsightsFromPage(championId, championName){
-  const slugs = candidateOpggSlugs(championId, championName);
+  const slugs = candidateUggSlugs(championId, championName);
   for (const slug of slugs){
     const cached = championInsightsBySlug[slug];
     if (
@@ -897,9 +944,9 @@ async function loadChamps(){
         image: `${DDRAGON_BASE_URL}/${latestVersion}/img/champion/${ch.id}.png`
       }))
       .sort((a,b)=>a.name.localeCompare(b.name));
-    loadLiveChampionRates();
-    loadItemData(latestVersion);
     renderChampions();
+    loadLiveChampionRates().catch(() => console.warn("Live rates unavailable"));
+    loadItemData(latestVersion).catch(() => console.warn("Item data unavailable"));
   }catch(e){
     document.getElementById("list").innerText="Failed to load champions.";
     console.error(e);
@@ -1018,70 +1065,42 @@ async function showChampion(c){
       if (requestId === activeChampionRequestId) contentDiv.classList.add('show');
     },100);
 
-    // Resolve live rates in background so champion details render immediately.
     (async () => {
       try {
-        const rates = await loadLiveChampionRates();
-        if (requestId !== activeChampionRequestId) return;
-        let live = rates[normalizeChampionName(champion.name)] || rates[normalizeChampionName(c.id)] || null;
-        if (!live) {
-          live = await fetchChampionRatesFromPage(c.id, champion.name);
-          if (requestId !== activeChampionRequestId) return;
-          if (live) {
-            rates[normalizeChampionName(champion.name)] = live;
-            rates[normalizeChampionName(c.id)] = live;
-          }
-        }
-        if (!live) return;
-        const updateRate = (valueId, barId, rate) => {
-          const text = formatRate(rate);
-          const valueEl = document.getElementById(valueId);
-          const barEl = document.getElementById(barId);
-          if (valueEl) valueEl.textContent = text;
-          if (barEl) {
-            barEl.style.width = `${rate ?? 0}%`;
-            barEl.textContent = text;
-          }
-        };
-        updateRate("winRateValue", "winRateBar", live.win);
-        updateRate("pickRateValue", "pickRateBar", live.pick);
-        updateRate("banRateValue", "banRateBar", live.ban);
-      } catch (error) {
-        console.error(error);
-      }
-    })();
-
-    (async () => {
-      try {
-        const [insights, itemData] = await Promise.all([
+        const [rates, insights, itemData] = await Promise.all([
+          fetchChampionRatesFromPage(c.id, champion.name),
           fetchChampionInsightsFromPage(c.id, champion.name),
           loadItemData(c.version)
         ]);
         if (requestId !== activeChampionRequestId) return;
         const runesEl = document.getElementById("recommendedRunes");
+
         const bootsEl = document.getElementById("recommendedBoots");
         const coreEl = document.getElementById("recommendedCore");
         const fifthEl = document.getElementById("recommendedFifth");
         const worstEl = document.getElementById("worstMatchups");
         const bestEl = document.getElementById("bestMatchups");
 
+        updateRateDisplay(rates);
+
         if (runesEl) runesEl.innerHTML = renderRunesHtml(insights.runes);
 
         const { boots, core, fifth } = partitionRecommendedItems(insights.itemIds, itemData);
+
         if (bootsEl) {
           bootsEl.innerHTML = boots.length
             ? renderItemChips(boots, itemData, c.version)
-            : "<p>No boot data in this build snapshot.</p>";
+            : "<p>No boot data available.</p>";
         }
         if (coreEl) {
           coreEl.innerHTML = core.length
             ? renderItemChips(core, itemData, c.version)
-            : "<p>No core items (2500g+) parsed.</p>";
+            : "<p>No core items found.</p>";
         }
         if (fifthEl) {
           fifthEl.innerHTML = fifth.length
             ? renderItemChips(fifth, itemData, c.version)
-            : "<p>No flex options listed after core.</p>";
+            : "<p>No flex items found.</p>";
         }
         if (worstEl) {
           worstEl.innerHTML = insights.worst.length
@@ -1095,6 +1114,7 @@ async function showChampion(c){
         }
       } catch (error) {
         if (requestId !== activeChampionRequestId) return;
+        console.error("Failed to load build data:", error);
         const runesEl = document.getElementById("recommendedRunes");
         const bootsEl = document.getElementById("recommendedBoots");
         const coreEl = document.getElementById("recommendedCore");
@@ -1102,12 +1122,11 @@ async function showChampion(c){
         const worstEl = document.getElementById("worstMatchups");
         const bestEl = document.getElementById("bestMatchups");
         if (runesEl) runesEl.innerHTML = "<p>No rune data available.</p>";
-        if (bootsEl) bootsEl.innerHTML = "<p>No build data available right now.</p>";
-        if (coreEl) coreEl.innerHTML = "<p>No build data available right now.</p>";
-        if (fifthEl) fifthEl.innerHTML = "<p>No build data available right now.</p>";
+        if (bootsEl) bootsEl.innerHTML = "<p>No boot data available.</p>";
+        if (coreEl) coreEl.innerHTML = "<p>No core items found.</p>";
+        if (fifthEl) fifthEl.innerHTML = "<p>No flex items found.</p>";
         if (worstEl) worstEl.innerHTML = "<p>No matchup data available.</p>";
         if (bestEl) bestEl.innerHTML = "<p>No matchup data available.</p>";
-        console.error(error);
       }
     })();
   }catch(e){
@@ -1115,6 +1134,33 @@ async function showChampion(c){
     d.innerText="Failed to load details.";
     console.error(e);
   }
+}
+
+function updateRateDisplay(rates){
+  const win = rates && rates.win !== null ? rates.win : null;
+  const pick = rates && rates.pick !== null ? rates.pick : null;
+  const ban = rates && rates.ban !== null ? rates.ban : null;
+  const winBar = document.getElementById("winRateBar");
+  const pickBar = document.getElementById("pickRateBar");
+  const banBar = document.getElementById("banRateBar");
+  const winValue = document.getElementById("winRateValue");
+  const pickValue = document.getElementById("pickRateValue");
+  const banValue = document.getElementById("banRateValue");
+  if (winBar) {
+    winBar.style.width = `${win ?? 0}%`;
+    winBar.textContent = formatRate(win);
+  }
+  if (pickBar) {
+    pickBar.style.width = `${pick ?? 0}%`;
+    pickBar.textContent = formatRate(pick);
+  }
+  if (banBar) {
+    banBar.style.width = `${ban ?? 0}%`;
+    banBar.textContent = formatRate(ban);
+  }
+  if (winValue) winValue.textContent = formatRate(win);
+  if (pickValue) pickValue.textContent = formatRate(pick);
+  if (banValue) banValue.textContent = formatRate(ban);
 }
 
 document.getElementById("search").oninput = ()=>{
