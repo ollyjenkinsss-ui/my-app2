@@ -3,13 +3,15 @@ body {
   font-family:'Barlow Condensed', sans-serif;
   display:flex;
   flex-direction:column;
-  height:100vh;
+  min-height:100dvh;
+  height:auto;
   background:
     radial-gradient(circle at top left, rgba(55, 110, 255, 0.12), transparent 28%),
     radial-gradient(circle at top right, rgba(167, 91, 255, 0.10), transparent 26%),
     linear-gradient(135deg, #07111f 0%, #0c1730 48%, #101d3f 100%);
   color:#eef3ff;
-  overflow:hidden;
+  overflow-x:hidden;
+  overflow-y:auto;
   transition: background 0.3s, color 0.3s;
 }
 body.light {
@@ -35,6 +37,8 @@ body.light {
   left:0;
   z-index:10;
   flex-shrink:0;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 body.light #header {
   background: rgba(240, 244, 255, 0.88);
@@ -776,5 +780,47 @@ body.light .compare-card {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  #header {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  #header > div:first-child {
+    width: 100%;
+  }
+
+  .toggle-container {
+    margin-right: 0;
+    margin-left: auto;
+  }
+
+  .page {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 780px) {
+  #championsPage.page {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #sidebar {
+    width: 100%;
+    max-height: none;
+    border-radius: 16px;
+  }
+
+  #content {
+    padding-left: 0;
+  }
+
+  .champ-column {
+    border-right: 0;
+    padding-right: 0;
   }
 }

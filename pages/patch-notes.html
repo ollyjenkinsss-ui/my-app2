@@ -184,6 +184,31 @@ body.light .impact-item {
   background: linear-gradient(145deg, #e5e5e5, #d1d1d1);
   border-color: rgba(90, 90, 175, 0.25);
 }
+
+@media (max-width: 720px) {
+  #header {
+    align-items: flex-start;
+  }
+
+  #header > div:first-child {
+    width: 100%;
+  }
+
+  .toggle-container {
+    margin-right: 0;
+    margin-left: auto;
+  }
+
+  #header a {
+    padding: 6px 9px;
+  }
+
+  .hero,
+  .note,
+  .impact {
+    padding: 12px;
+  }
+}
 </style>
 </head>
 <body>

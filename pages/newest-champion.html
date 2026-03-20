@@ -231,6 +231,25 @@
     body.light .status {
       color: #3f3f5f;
     }
+
+    @media (max-width: 720px) {
+      #header {
+        align-items: flex-start;
+      }
+
+      #header > div:first-child {
+        width: 100%;
+      }
+
+      .toggle-container {
+        margin-right: 0;
+        margin-left: auto;
+      }
+
+      #header a {
+        padding: 6px 9px;
+      }
+    }
   </style>
 </head>
 

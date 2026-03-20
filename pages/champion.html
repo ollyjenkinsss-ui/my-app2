@@ -287,6 +287,33 @@
   #status { font-size: 18px; font-weight: 600; padding: 20px; text-align: center; }
   body.light #status { color: #333; }
 
+  @media (max-width: 760px) {
+    #header {
+      align-items: flex-start;
+    }
+
+    #header > div:first-child {
+      width: 100%;
+    }
+
+    .toggle-container {
+      margin-right: 0;
+      margin-left: auto;
+    }
+
+    #header a {
+      padding: 6px 9px;
+    }
+
+    .wrap {
+      padding: 10px;
+    }
+
+    .card {
+      padding: 14px;
+    }
+  }
+
 </style>
 </head>
 <body>
