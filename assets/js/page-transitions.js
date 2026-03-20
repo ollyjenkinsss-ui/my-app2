@@ -8,7 +8,7 @@
 
   var STYLE =
     "html.pt-root{min-height:100%;}" +
-    "#globalBackBtn{position:fixed;left:12px;top:60px;z-index:1200;border:1px solid rgba(165,180,252,.45);background:rgba(12,20,44,.82);color:#eef3ff;border-radius:999px;padding:7px 12px;font:600 14px/1 'Barlow Condensed',sans-serif;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .16s ease,background .16s ease,border-color .16s ease;}" +
+    "#globalBackBtn{position:fixed;left:12px;top:45px;z-index:1200;border:1px solid rgba(165,180,252,.45);background:rgba(12,20,44,.82);color:#eef3ff;border-radius:999px;padding:7px 12px;font:600 14px/1 'Barlow Condensed',sans-serif;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .16s ease,background .16s ease,border-color .16s ease;}" +
     "#globalBackBtn:hover{transform:translateY(-1px);background:rgba(70,108,220,.28);border-color:rgba(165,180,252,.75);}" +
     "body.light #globalBackBtn{background:rgba(245,248,255,.88);color:#102247;border-color:rgba(90,90,175,.35);}" +
     "@media (max-width:820px){#globalBackBtn{left:10px;top:72px;padding:6px 10px;font-size:13px;}}" +
